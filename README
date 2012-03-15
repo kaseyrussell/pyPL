@@ -1,0 +1,67 @@
+Contents of this document:
+Features
+Windows
+How to start pyPL
+How to shut down pyPL
+Joystick explainer
+Position and marker log details
+Image navigation
+Known issues
+
+
+Features:
+Control stepper-motors for stage coarse positioning
+Control piezos for fine positioning of objective
+Joystick control (with support for multiple joysticks)
+both piezos and motors
+push-button toggle between WinSpec and the camera windows
+Position logging, with move-to-click
+Position markers, with ability to move back to the markers
+Image navigation (load in a low-mag picture, calibrate to some easy-to-find features)
+Raster-scanning (in all three dimensions) using either the spectrometer or APDs
+
+Windows (with exception of main window, all can be closed and reopened through the menu):
+Main pyPL window
+pyPiezos window (mouse & keyboard control over piezos)
+Position Log
+Image Navigation
+pyRaster (for raster scanning using either spectrometer or APDs).
+
+How to start pyPL:
+Turn on piezo and motor controllers
+Plug in joysticks
+Double-click on pyPL.pyw
+The first window to pop up will be a reminder to zero/home the motors and piezos
+This is only necessary if you have turned off the controllers; once homed/zeroed they stay that way until you turn them off
+Homing (This is only for connected motors—the window will display a “front panel” for each card detected in the controller even if there is no motor connected to the card. I have no idea what happens if you try to 'home' a motor when there isn't one... For the current stage setup, we only have X and Y motors connected and not Z.):
+On main pyPL window, click the 'Home/Zero' button and wait while the stage moves to the end of its range. When it reaches the end, a switch will be depressed that will automatically stop the stage and reset the position and display to 0. Once that happens, you're good to go.
+Zeroing (like homing, but for piezos).
+On main pyPL window, click 'zero' for each connected piezo. Wait until done.
+I generally move the piezos to the middle of their range (so 10 um; range is 0-20 um).
+
+
+How to shut down pyPL:
+	File menu-->Exit, or just close the main window.
+
+
+Joystick Explainer:
+Here is a list of the joystick buttons and their associated actions. (The buttons actually have a number on them, which is what this is referring to).
+
+Button – Action
+trigger – toggles between controlling the motors and piezos
+1 – centers the X and Y piezos in their range (so sends them both to 10 um)
+2 – n/a
+3 – STOP MOTORS IMMEDIATELY. Also, this forces the joystick to control motors.
+4 – force joystick to control piezos
+5 – 
+
+
+Position and marker log details:
+You can save position and marker log to a file to know where you measured various things.
+
+
+Image navigation:
+Load in an image of your sample, drive to two reference points on the sample (e.g. opposite corners), and then you can click on the image to navigate around the sample.
+
+Known issues:
+The motors sometimes lock into a state in which they claim to be moving (i.e. the 'moving' indicator light on the fake “front panel” in the pyPL main window will remain lit up) but are not actually moving. When this happens, the motor gets hot and the only thing for it is to shut off the controller. I don't know why this happens, but I suspect it is joystick related...
