@@ -12,14 +12,16 @@ if matplotlib.get_backend() != 'WXAgg':
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx as MPLToolbar
-import pylab
 from wx._controls import TE_PROCESS_ENTER
-
+import os.path
+import cPickle
 import ManageMarkers
 
 ID_Stuff_ManageMarkers = wx.NewId()
 ID_MarkerLog_Erase = wx.NewId()
 ID_PositionLog_Erase = wx.NewId()
+ID_PositionLog_Save = wx.NewId()
+ID_PositionLog_Load = wx.NewId()
 
 class MainApp( wx.App ): 
     def __init__( self, redirect=False, filename=None ):
@@ -32,7 +34,7 @@ class MainFrame( wx.Frame ):
                  size=wx.Size(500,500) ):
         wx.Frame.__init__( self, None, id=id, title=title, size=size )
         self.Bind( wx.EVT_CLOSE, self.on_close_mainframe )
-        
+        self.parent = parent
         self.x_log = parent.x_log
         self.y_log = parent.y_log
         self.markers = parent.markers
@@ -44,7 +46,6 @@ class MainFrame( wx.Frame ):
         box = wx.BoxSizer( wx.VERTICAL )
 
         self.PositionLogAutoRange = True
-        #self.fig = pylab.figure( facecolor='white' )
         self.fig = Figure( facecolor='white' )
         self.fig.clf()
         self.axes = self.fig.add_subplot(111)
@@ -129,6 +130,12 @@ class MainFrame( wx.Frame ):
         """ Stuff menu
         """
         stuff_menu = wx.Menu()
+        stuff_menu.Append( ID_PositionLog_Save, "Save Position Log", "Save position log.")
+        wx.EVT_MENU( self, ID_PositionLog_Save, self.on_stuff_menu_save_position_log )
+
+        stuff_menu.Append( ID_PositionLog_Load, "Load Position Log", "Load position log from file.")
+        wx.EVT_MENU( self, ID_PositionLog_Load, self.on_stuff_menu_load_position_log )
+
         stuff_menu.Append( ID_Stuff_ManageMarkers, "Manage Markers", "Lets you delete individual markers" )
         wx.EVT_MENU( self, ID_Stuff_ManageMarkers, self.on_stuff_menu_manage_markers )
     
@@ -263,6 +270,56 @@ class MainFrame( wx.Frame ):
         else:
             dlg.Destroy()
 
+
+
+    def on_stuff_menu_save_position_log( self, event ):
+        dlg = wx.FileDialog( self, ("Save position log to a *.pkl file " +
+                                "(extension will be automatically appended)"),
+                    style=wx.SAVE|wx.FD_OVERWRITE_PROMPT )
+        dlg.SetWildcard("Pickle (*.pkl)|*.pkl")
+
+        if dlg.ShowModal() == wx.ID_OK:
+            self.DataPath = dlg.GetPath()
+            self.DataPath = os.path.splitext(self.DataPath)[0] # we'll append extension later
+
+            data = dict(xpoints=self.x_log,
+                        ypoints=self.y_log,
+                        markers=self.markers,
+                        file_type="position_log",
+                        stage_direction_x=self.positioners['motorX']['direction'],
+                        stage_direction_y=self.positioners['motorY']['direction'],
+                        )
+            with open( self.DataPath + ".pkl", 'wb' ) as d:
+                cPickle.dump( data, d )
+                
+        dlg.Destroy()
+
+
+    def on_stuff_menu_load_position_log( self, event ):
+        dlg = wx.FileDialog( self, ("Load a position log file " +
+                                "(this will overwrite the current position log)"),
+                    style=wx.OPEN )
+        dlg.SetWildcard("Pickle (*.pkl)|*.pkl")
+            
+        if dlg.ShowModal() == wx.ID_OK:
+            with open( dlg.GetPath(), 'rb' ) as fobj:
+                data = cPickle.load( fobj )
+
+            if ( type(data) != dict or
+                 not data.has_key('file_type') or
+                 data['file_type'] != 'position_log' ):
+                dlg.Destroy()
+                return
+                    
+            self.x_log[:] = data['xpoints'][:]
+            self.y_log[:] = data['ypoints'][:]
+            self.markers[:] = data['markers'][:]
+
+            self.x_log.append( self.positioners['motorX']['control'].GetPosition() )
+            self.y_log.append( self.positioners['motorY']['control'].GetPosition() )
+
+            self.update_plot()
+        dlg.Destroy()
 
 
     def update_plot( self ):

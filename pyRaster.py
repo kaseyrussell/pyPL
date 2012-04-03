@@ -137,6 +137,7 @@ class Raster( Raster_GUI.MainFrame ):
 
     def clear_fig2( self, event ):
         self.moveline = None
+        self.line_list = []
         self.fig2.axes.cla()
         self.fig2.canvas.draw()
         self.grid.DeleteRows( pos=0, numRows=self.grid.GetNumberRows() )
@@ -248,6 +249,10 @@ class Raster( Raster_GUI.MainFrame ):
     def on_button_start_clicked( self, event ):
         # Trigger the worker thread unless it's already busy
         if self.positioners is not None:
+            self.line_list = []
+            self.data = None
+            self.update_fig2()
+            if self.grid.NumberRows > 0: self.grid.DeleteRows(pos=0,numRows=self.grid.GetNumberRows() )
             self.use_winspec = self.choice_Winspec_or_APDs.GetSelection() == 0
             if not self.within_piezo_limits():
                 self.statusbar.SetStatusText( 'SCAN EXCEEDS PIEZO RANGE!!! Aborted.', 0 )
@@ -301,8 +306,7 @@ class Raster( Raster_GUI.MainFrame ):
         else:
             ix = pylab.find( x>self.xcorners )[-1]
         
-        #if self.data['scans'][ix][iy]['lum'] == 0:
-        if self.cmap_matrix[ix,iy] == 0:
+        if self.cmap_matrix[iy][ix] == 0.0:
             # empty pixel
             return True
         
@@ -327,6 +331,11 @@ class Raster( Raster_GUI.MainFrame ):
         
 
     def update_fig2(self, ix=None, iy=None):
+        if len(self.line_list) == 0:
+            self.fig2.axes.cla()
+            self.fig2.canvas.draw()
+            return True
+        
         for line in self.line_list:
             self.fig2.axes.plot( self.wavelen, line['spectrum'], color=[c/255.0 for c in line['color']] )
 
@@ -697,12 +706,12 @@ class Raster( Raster_GUI.MainFrame ):
         
         for line in self.data['scans']:
             for scan in line:
-                if scan is not None and self.cmap_matrix[scan['iy'],scan['ix']]==0.0:
+                if scan is not None and self.cmap_matrix[scan['iy']][scan['ix']]==0.0:
                     if self.use_winspec:
                         signal = scan['lum'][self.slider_integration_min.GetValue():self.slider_integration_max.GetValue()]
-                        self.cmap_matrix[scan['iy'],scan['ix']] = pylab.sum( signal )
+                        self.cmap_matrix[scan['iy']][scan['ix']] = pylab.sum( signal )
                     else:
-                        self.cmap_matrix[scan['iy'],scan['ix']] = scan['cps']
+                        self.cmap_matrix[scan['iy']][scan['ix']] = scan['cps']
                         
         self.fig1.axes.cla()
         self.cmap = self.fig1.axes.pcolormesh(

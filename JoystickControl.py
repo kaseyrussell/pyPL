@@ -21,7 +21,7 @@ min_motor_step = 0.002 # mm
 max_motor_step = 0.05   # mm
 min_piezo_step = 0.02  # microns
 max_piezo_step = 2.0   # microns
-joystick_threshold = 0.05 # minimum joystick movement needed to trigger motion
+joystick_threshold = 0.1 # minimum joystick movement needed to trigger motion
 
 # associate buttons: (take this value and add one to get the number actually printed on the joystick)
 toggle_motors_piezos_button = 0
