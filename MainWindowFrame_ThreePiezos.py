@@ -13,7 +13,7 @@ class FakeEvent:
 
 class MainPanel( wx.Panel ):
     def __init__( self, parent, positioners, id=wx.ID_ANY ):
-        wx.Panel.__init__( self, parent, id )
+        wx.Panel.__init__( self, parent, id, style=wx.WANTS_CHARS )
         self.piezoX = positioners['piezoX']
         self.piezoY = positioners['piezoY']
         self.piezoZ = positioners['piezoZ']
@@ -247,6 +247,13 @@ class MainPanel( wx.Panel ):
             Yloc = self.piezoY['control'].PositionCh1
             self.Yslider.SetValue( Yloc*1000 )
             self.Ylocation.SetValue( "%.3f" % Yloc )
+
+        if msg.data == 'focus':
+            self.On_button_ZrangeLg_Clicked( None )
+            Zloc = self.piezoZ['control'].PositionCh1
+            self.Zslider.SetValue( Zloc*1000 )
+            self.Zlocation.SetValue( "%.3f" % Zloc )
+
             
 
     def On_joystick_moved( self, msg ):
@@ -286,6 +293,20 @@ class MainPanel( wx.Panel ):
             self.piezoX['control'].SetPosition( position=newposition/1000 )
             self.On_piezos_moved(FakeEvent('raster'))
             
+        elif ((code == wx.WXK_UP and event.AltDown() and self.piezoZ['direction']==1) or
+                (code == wx.WXK_DOWN and event.AltDown() and self.piezoZ['direction']==-1)):
+            newposition = self.piezoZ['control'].PositionCh1*1000 + self.jogsize
+            newposition = self.PiezoMax if newposition > self.PiezoMax else newposition
+            self.piezoZ['control'].SetPosition( position=newposition/1000 )
+            self.On_piezos_moved(FakeEvent('focus'))
+
+        elif ((code == wx.WXK_UP and event.AltDown() and self.piezoZ['direction']==-1) or
+                (code == wx.WXK_DOWN and event.AltDown() and self.piezoZ['direction']==1)):
+            newposition = self.piezoZ['control'].PositionCh1*1000 - self.jogsize
+            newposition = self.PiezoMin if newposition < self.PiezoMin else newposition
+            self.piezoZ['control'].SetPosition( position=newposition/1000 )
+            self.On_piezos_moved(FakeEvent('focus'))
+
         elif ((code == wx.WXK_UP and self.piezoY['direction']==1) or
                 (code == wx.WXK_DOWN and self.piezoY['direction']==-1)):
             newposition = self.piezoY['control'].PositionCh1*1000 + self.jogsize
