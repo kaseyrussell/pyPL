@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*- 
 
 ###########################################################################
-## Python code generated with wxFormBuilder (version Apr 11 2011)
+## Python code generated with wxFormBuilder (version Dec  2 2011)
 ## http://www.wxformbuilder.org/
 ##
 ## PLEASE DO "NOT" EDIT THIS FILE!
 ###########################################################################
 
 import wx
+import wx.xrc
 import wxMatplotlib
 import wx.grid
 
@@ -169,6 +170,17 @@ class MainFrame ( wx.Frame ):
 		self.choice_Winspec_or_APDs.SetSelection( 0 )
 		sizer_controls.Add( self.choice_Winspec_or_APDs, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 		
+		bSizer15 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.txtlabel_APDacq = wx.StaticText( self.mainpanel, wx.ID_ANY, u"APD acq. (ms):", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.txtlabel_APDacq.Wrap( -1 )
+		bSizer15.Add( self.txtlabel_APDacq, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.LEFT, 5 )
+		
+		self.txtctrl_APDacq = wx.TextCtrl( self.mainpanel, wx.ID_ANY, u"8", wx.DefaultPosition, wx.Size( 30,-1 ), wx.TE_PROCESS_ENTER|wx.TE_RIGHT )
+		bSizer15.Add( self.txtctrl_APDacq, 0, wx.ALL, 5 )
+		
+		sizer_controls.Add( bSizer15, 1, wx.EXPAND, 5 )
+		
 		self.button_start = wx.Button( self.mainpanel, wx.ID_ANY, u"Start", wx.DefaultPosition, wx.DefaultSize, 0 )
 		sizer_controls.Add( self.button_start, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL, 5 )
 		
@@ -267,6 +279,8 @@ class MainFrame ( wx.Frame ):
 		self.txtctrl_scan_num_ypoints.Bind( wx.EVT_TEXT, self.on_txtctrl_scan_num_ypoints_changed )
 		self.txtctrl_scan_zrange.Bind( wx.EVT_TEXT, self.on_txtctrl_scan_zrange_changed )
 		self.txtctrl_scan_num_zpoints.Bind( wx.EVT_TEXT, self.on_txtctrl_scan_num_zpoints_changed )
+		self.choice_Winspec_or_APDs.Bind( wx.EVT_CHOICE, self.on_choice_winspec_or_apds )
+		self.txtctrl_APDacq.Bind( wx.EVT_TEXT_ENTER, self.on_txtctrl_APDacq_changed )
 		self.button_start.Bind( wx.EVT_BUTTON, self.on_button_start_clicked )
 		self.button_stop.Bind( wx.EVT_BUTTON, self.on_button_stop_clicked )
 		self.button_save.Bind( wx.EVT_BUTTON, self.on_button_save_clicked )
@@ -310,6 +324,12 @@ class MainFrame ( wx.Frame ):
 		event.Skip()
 	
 	def on_txtctrl_scan_num_zpoints_changed( self, event ):
+		event.Skip()
+	
+	def on_choice_winspec_or_apds( self, event ):
+		event.Skip()
+	
+	def on_txtctrl_APDacq_changed( self, event ):
 		event.Skip()
 	
 	def on_button_start_clicked( self, event ):

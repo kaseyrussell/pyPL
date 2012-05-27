@@ -17,11 +17,11 @@ piezos = 'piezos'
 motors = 'motors'
 motors_or_piezos = piezos
 
-min_motor_step = 0.002 # mm
-max_motor_step = 0.05   # mm
-min_piezo_step = 0.02  # microns
+min_motor_step = 0.001 # mm
+max_motor_step = 0.02   # mm
+min_piezo_step = 0.05  # microns
 max_piezo_step = 2.0   # microns
-joystick_threshold = 0.1 # minimum joystick movement needed to trigger motion
+joystick_threshold = 0.15 # minimum joystick movement needed to trigger motion
 
 # associate buttons: (take this value and add one to get the number actually printed on the joystick)
 toggle_motors_piezos_button = 0
@@ -128,26 +128,28 @@ def update_position( positioners, xyz ):
     piezoZ = positioners['piezoZ']
            
     stepsize = calc_stepsize( xyz['Z'], motors_or_piezos, fine_control )
+    net_joy_X = xyz['X'] - joystick_threshold if xyz['X']>0 else xyz['X'] + joystick_threshold
+    net_joy_Y = xyz['Y'] - joystick_threshold if xyz['Y']>0 else xyz['Y'] + joystick_threshold
     
     """ Use the current position of the joystick to step the motors. stepsize is set by throttle.""" 
     if motors_or_piezos == motors and focusing == False:
-        if motorX is not None and motorX['control'].MotorIsNotMoving():
-            time.sleep(0.075) # this is an attempt to keep the motor from locking
-            motorX['control'].StepUp( polarity=motorX['direction'], stepsize=stepsize*xyz['X'], wait=False )
+        if motorX is not None and motorX['control'].MotorIsNotMoving() and abs(xyz['X'])>joystick_threshold:
+            time.sleep(0.1) # this is an attempt to keep the motor from locking
+            motorX['control'].StepUp( polarity=motorX['direction'], stepsize=stepsize*net_joy_X, wait=False )
         
-        if motorY is not None and motorY['control'].MotorIsNotMoving():
-            time.sleep(0.075) # this is an attempt to keep the motor from locking
-            motorY['control'].StepUp( polarity=motorY['direction'], stepsize=stepsize*xyz['Y'], wait=False )
+        if motorY is not None and motorY['control'].MotorIsNotMoving() and abs(xyz['Y'])>joystick_threshold:
+            time.sleep(0.1) # this is an attempt to keep the motor from locking
+            motorY['control'].StepUp( polarity=motorY['direction'], stepsize=stepsize*net_joy_Y, wait=False )
             #print motorY['control'].GetStatusBits_Bits()
             
         Publisher().sendMessage("joystick-moved", 'motors')
             
     elif motors_or_piezos == piezos and focusing == False:
-        if piezoX is not None:
-            piezoX['control'].StepUp( direction=piezoX['direction'], stepsize=stepsize*xyz['X'] )
+        if piezoX is not None and abs(xyz['X'])>joystick_threshold:
+            piezoX['control'].StepUp( direction=piezoX['direction'], stepsize=stepsize*net_joy_X )
             
-        if piezoY is not None:
-            piezoY['control'].StepUp( direction=piezoY['direction'], stepsize=stepsize*xyz['Y'] )
+        if piezoY is not None and abs(xyz['Y'])>joystick_threshold:
+            piezoY['control'].StepUp( direction=piezoY['direction'], stepsize=stepsize*net_joy_Y )
             
         if piezoX is not None or piezoY is not None:
             Publisher().sendMessage("joystick-moved", 'piezos')

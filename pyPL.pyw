@@ -45,6 +45,8 @@ ID_MarkerLog_Erase = wx.NewId()
 class MainApp( wx.App ): 
     def __init__( self, redirect=False, filename=None ):
         wx.App.__init__( self, redirect, filename )
+        self.evtloop = wx.EventLoop()
+        wx.EventLoop.SetActive(self.evtloop) 
         
         self.x_log = []
         self.y_log = []

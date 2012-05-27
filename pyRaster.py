@@ -2,7 +2,7 @@
     KJR April 2011
     Hu Group, SEAS Harvard
 """
-
+from __future__ import division
 import wx
 from wx.lib.pubsub import Publisher
 import Raster_GUI
@@ -40,9 +40,11 @@ def EVT_UPDATE(win, func):
 class MainApp( wx.App ): 
     def __init__( self, redirect=False, filename=None ):
         wx.App.__init__( self, redirect, filename )
+        self.evtloop = wx.EventLoop()
+        wx.EventLoop.SetActive(self.evtloop) 
         self.Bind( wx.EVT_CLOSE, self.on_close_Raster )
         
-        self.mainframe = Raster( None )
+        self.mainframe = Raster( self ) #None )
     
     def on_close_Raster( self, event ):
         self.Destroy()
@@ -51,6 +53,7 @@ class MainApp( wx.App ):
 class Raster( Raster_GUI.MainFrame ):
     def __init__( self, parent ):
         Raster_GUI.MainFrame.__init__( self, parent=None )
+        self.evtloop = parent.evtloop
 
         self.fig1.canvas.mpl_connect( 'button_press_event', self.on_click_canvas1 )
         self.fig1.canvas.mpl_connect( 'motion_notify_event', self.on_move_in_axes1 )
@@ -83,6 +86,7 @@ class Raster( Raster_GUI.MainFrame ):
             # need these for plotting. ideally this info would be stored with the data...
             self.piezoX = dict( direction=-1 )
             self.piezoY = dict( direction=1 )
+            self.evtloop = None
 
         self.rowlabel_column = -1 # set by wxpython; named here for clarity
         self.grid_color_column = 0
@@ -105,8 +109,8 @@ class Raster( Raster_GUI.MainFrame ):
                             (190, 0, 190),
                             (190, 190, 0),
                             (0, 0, 0) ]
-        self.color_data = wx.ColourData()
-
+        self.color_data = wx.ColourData() 
+        
         self.worker = None
         self.data = None
         self.DataPath = ""
@@ -131,7 +135,13 @@ class Raster( Raster_GUI.MainFrame ):
                                  self.txtlabel_zres,
                                  self.txtlabel_scan_z_resolution ]
         
+        self.APD_controls = [ self.txtlabel_APDacq,
+                              self.txtctrl_APDacq ]
+        
+        self.APD_t_acq = 8
+        self.txtctrl_APDacq.SetValue(str(self.APD_t_acq))
         self.hide_3D_controls()
+        self.hide_APD_controls()
         self.Show( True )
 
 
@@ -148,9 +158,9 @@ class Raster( Raster_GUI.MainFrame ):
         """ Update statusbar field 1 (zero-indexed, of course) with the current
             mouse position
         """
-        text = "x:"+str(x)+", y:"+str(y)
+        text = "x: {0:.3f}, y: {1:.3f}".format(x,y)
         if lum is not None:
-            text += ", lum:"+str(lum)
+            text += ", lum: "+str(lum)
         self.statusbar.SetStatusText( text, 1 )
 
 
@@ -186,6 +196,17 @@ class Raster( Raster_GUI.MainFrame ):
     def show_3D_controls( self ):
         for item in self.GUI_3D_controls: item.Show()
         self.mainpanel.Layout()
+
+
+    def hide_APD_controls( self ):
+        for item in self.APD_controls: item.Hide()
+        self.mainpanel.Layout()
+        self.Refresh()
+
+    def show_APD_controls( self ):
+        for item in self.APD_controls: item.Show()
+        self.mainpanel.Layout()
+        self.Refresh()
 
 
     def make_cmap_matrix( self ):
@@ -258,6 +279,8 @@ class Raster( Raster_GUI.MainFrame ):
                 self.statusbar.SetStatusText( 'SCAN EXCEEDS PIEZO RANGE!!! Aborted.', 0 )
                 return False                
             
+            if not self.use_winspec: self.on_txtctrl_APDacq_changed(None)
+
             if not self.worker:
                 self.statusbar.SetStatusText( 'Starting scan.', 0 )
                 self.worker = WorkerThread( self )
@@ -280,13 +303,15 @@ class Raster( Raster_GUI.MainFrame ):
             self.worker.abort()
             self.button_save.SetLabel('Save partial')
 
+    def on_choice_winspec_or_apds(self, event):
+        if self.choice_Winspec_or_APDs.GetSelection() == 0:
+            self.hide_APD_controls()
+        else:
+            self.show_APD_controls()
 
     def on_click_canvas1( self, event ):
         if not event.inaxes: return True
         if self.data is None: return True
-        if not self.use_winspec: return True
-
-        self.wavelen = self.data['wavelen']
         
         x = event.xdata
         y = event.ydata
@@ -296,6 +321,9 @@ class Raster( Raster_GUI.MainFrame ):
             self.button_move_to_click.SetLabel("Move to click")
             return True
         
+        if not self.use_winspec: return True
+        self.wavelen = self.data['wavelen']
+
         if self.piezoY['direction'] == 1:
             iy = pylab.find( y<self.ycorners )[-1]
         else:
@@ -519,23 +547,26 @@ class Raster( Raster_GUI.MainFrame ):
         if not event.inaxes: return True
         x = event.xdata
         y = event.ydata
-        self.display_position( x, y )
+
+        if hasattr( self, 'cmap_matrix' ):
+            if self.piezoY['direction'] == 1:
+                iy = pylab.find( y<self.ycorners )[-1]
+            else:
+                iy = pylab.find( y>self.ycorners )[-1]
+    
+            if self.piezoX['direction'] == 1:
+                ix = pylab.find( x<self.xcorners )[-1]
+            else:
+                ix = pylab.find( x>self.xcorners )[-1]
+            
+            lum = self.cmap_matrix[iy][ix]
+        else:
+            lum = None    
+        self.display_position( x, y, lum=lum )
         if self.data is None: return True
         if not self.use_winspec: return True
         if not hasattr( self, 'moveline' ): return True
         if self.moveline is None: return True
-        
-        
-        if self.piezoY['direction'] == 1:
-            iy = pylab.find( y<self.ycorners )[-1]
-        else:
-            iy = pylab.find( y>self.ycorners )[-1]
-
-        if self.piezoX['direction'] == 1:
-            ix = pylab.find( x<self.xcorners )[-1]
-        else:
-            ix = pylab.find( x>self.xcorners )[-1]
-    
         self.update_moveline_spectrum( ix, iy )
         
         # these don't work for me in this form, but sounded interesting if
@@ -633,19 +664,12 @@ class Raster( Raster_GUI.MainFrame ):
                 self.save_data()
             else:
                 self.button_save.SetLabel('Save')
-                
+
         self.worker = None
         self.button_move_to_click.SetLabel("Move to click")
 
 
     def on_thread_update( self, event ):
-        if event.flag != 'Z': self.data = event.data
-        self.num_acquisitions += 1
-        self.statusbar.SetStatusText( 'Done with acquisition #%s' % (self.num_acquisitions), 2 )
-        if (self.num_acquisitions == 1):
-            self.make_cmap_matrix()
-        if (self.num_acquisitions > 1):
-            self.plot_data()
         if self.mouse_on_colormap == False:
             pass
         if event.flag == 'Z':
@@ -654,7 +678,23 @@ class Raster( Raster_GUI.MainFrame ):
             self.save_data()
             self.data['wait_for_save'][0] = False
             self.make_cmap_matrix()
+        elif event.flag == 'Initialized':
+            self.data = event.data
+            self.make_cmap_matrix()
+            self.plot_data()
+        elif type(event.flag) == dict and event.flag.has_key('xy') and not self.evtloop.Pending():
+            #self.data = event.data
+            self.update_colormap()
 
+    def on_txtctrl_APDacq_changed( self, event ):
+        if self.txtctrl_scan_width.GetValue() != "":
+            try:
+                self.APD_t_acq = int(round( float(self.txtctrl_APDacq.GetValue()) ))
+                self.txtctrl_APDacq.SetValue(str(self.APD_t_acq))
+            except:
+                self.APD_t_acq = 8
+                self.txtctrl_APDacq.SetValue(str(self.APD_t_acq))
+            
     def on_txtctrl_scan_width_changed( self, event ):
         if self.txtctrl_scan_width.GetValue() != "":
             self.scan_width = float( self.txtctrl_scan_width.GetValue() )
@@ -696,6 +736,41 @@ class Raster( Raster_GUI.MainFrame ):
                 self.txtlabel_scan_z_resolution.SetLabel( "%.3f" % (self.scan_zrange/(self.scan_num_zpoints-1)) )
     
 
+    def initialize_plot( self ):
+        """ Initializes the colormap of raster data in fig1 axes.
+        """
+        xpoints = pylab.array( self.data['xpoints'] )
+        ypoints = pylab.array( self.data['ypoints'] )
+        self.xcorners = kc.centers_to_corners( xpoints )
+        self.ycorners = kc.centers_to_corners( ypoints )
+        
+        for line in self.data['scans']:
+            for scan in line:
+                if scan is not None and self.cmap_matrix[scan['iy']][scan['ix']]==0.0:
+                    if self.use_winspec:
+                        signal = scan['lum'][self.slider_integration_min.GetValue():self.slider_integration_max.GetValue()]
+                        self.cmap_matrix[scan['iy']][scan['ix']] = pylab.sum( signal )
+                    else:
+                        self.cmap_matrix[scan['iy']][scan['ix']] = scan['cps']
+                        
+        self.fig1.axes.cla()
+        self.cmap = self.fig1.axes.pcolormesh(
+                            self.xcorners, self.ycorners, self.cmap_matrix )
+        self.fig1.axes.set_xlabel('Position ($\mu m$)')
+        self.fig1.axes.set_ylabel('Position ($\mu m$)')
+        self.fig1.axes.set_xlim([ self.xcorners.min(), self.xcorners.max() ])
+        self.fig1.axes.set_ylim([ self.ycorners.min(), self.ycorners.max() ])
+
+        if self.piezoX['direction'] == 1:
+            self.fig1.axes.invert_xaxis()
+        
+        if self.piezoY['direction'] == 1:
+            self.fig1.axes.invert_yaxis()
+        
+        self.fig1.axes.set_aspect('equal')
+        self.fig1.canvas.draw()
+        self.update_fig1_markers()
+
     def plot_data( self ):
         """ Plots the colormap of raster data in fig1 axes.
         """
@@ -731,11 +806,19 @@ class Raster( Raster_GUI.MainFrame ):
         self.fig1.canvas.draw()
         self.update_fig1_markers()
 
+    def update_colormap( self ):
+        """ Updates the colormap of raster data as the new data is acquired.
+        """
+        self.cmap.set_array( self.cmap_matrix.flatten() )
+        self.cmap.set_clim( self.cmap_matrix.min(), self.cmap_matrix.max() )
+        self.fig1.canvas.draw()
+        self.update_fig1_markers()
+
     def update_fig1_markers(self):
         for line in self.line_list:
             self.fig1.axes.plot( line['x'], line['y'], 'o', color=[c/255.0 for c in line['color']],
                                 scalex=False, scaley=False )
-            self.fig1.canvas.draw()
+        self.fig1.canvas.draw()
 
     def redraw_fig2( self ):
         if hasattr( self, 'line_min' ):
@@ -840,6 +923,7 @@ if not __name__ == "__main__":
 
         from ctypes import byref, pointer, c_long, c_float, c_bool
         import ctypes
+        import PicoQuant.PicoHarp300
         phlib = ctypes.windll.phlib
     except ImportError:
         pass
@@ -866,6 +950,8 @@ if not __name__ == "__main__":
             self._want_abort = 0
             self.scan_3D = parent.menu_scan_3D.IsChecked()
 
+            self.APD_t_acq = self._parent.APD_t_acq
+
             self.scan_width = float( parent.txtctrl_scan_width.GetValue() )
             self.scan_num_xpoints = int( parent.txtctrl_scan_num_xpoints.GetValue() )
             self.scan_height = float( parent.txtctrl_scan_height.GetValue() )
@@ -887,15 +973,19 @@ if not __name__ == "__main__":
             self.Z = self.piezoZ['control'].PositionCh1
             
             self.use_winspec = parent.choice_Winspec_or_APDs.GetSelection() == 0
-            
+            self.update_colormap = self._parent.update_colormap
+            self.slider_min = self._parent.slider_integration_min.GetValue()
+            self.slider_max = self._parent.slider_integration_max.GetValue()
 
         def abort( self ):
             """abort worker thread."""
             self._want_abort = 1
 
-
-        def add_signal_to_matrix( self, position ):
-            d = position.copy()
+        def get_cmap_matrix(self):
+            self.cmap_matrix = self._parent.cmap_matrix
+            
+        def add_signal_to_matrix( self, point ):
+            d = point
             if self.use_winspec:
                 d['lum'] = self.spectrum
             else:
@@ -903,6 +993,13 @@ if not __name__ == "__main__":
             self.scans[d['ix']][d['iy']] = d
             self.lastpoint['x'] = d['ix']
             self.lastpoint['y'] = d['iy']
+
+            x,y = d['ix'], d['iy']
+            if self.use_winspec:
+                signal = d['lum'][self.slider_min:self.slider_max]
+                self.cmap_matrix[y][x] = pylab.sum( signal )
+            else:
+                self.cmap_matrix[y][x] = d['cps']
             
 
         def acquire_signal( self, point, steps_completed ):
@@ -1032,27 +1129,8 @@ if not __name__ == "__main__":
                     w32c.pythoncom.CoUninitialize()
                     return False
             else:
-                self.device0 = ctypes.c_int(0)
-                self.channel0 = ctypes.c_int(0)
-                self.channel1 = ctypes.c_int(1)
-
-                self.ZeroCross0 = ctypes.c_long(9)  # in mV, for laser reference (not APD)
-                self.Discr0 = ctypes.c_long(15)     # in mV, for laser reference (not APD)
-                self.ZeroCross1 = ctypes.c_long(10) # in mV
-                self.Discr1 = ctypes.c_long(50)     # in mV
-
-                self.sync_divider = 8
-                self.SyncDivider = ctypes.c_long(self.sync_divider) # 1 is "None"
-
-                serial = ctypes.c_char_p('xxxxxx')
-                if phlib.PH_OpenDevice( self.device0, ctypes.byref(serial) ) < 0: self.shutdown_APDs( self.device0, normal_operation=False )
-                if phlib.PH_Initialize( self.device0, ctypes.c_int(2) ) < 0: self.shutdown_APDs( self.device0, normal_operation=False )
-
-                if phlib.PH_SetSyncDiv( self.device0, self.SyncDivider ) < 0: self.shutdown_APDs( self.device0, normal_operation=False )
-                if phlib.PH_SetCFDLevel( self.device0, ctypes.c_long(0), self.Discr0 ) < 0: self.shutdown_APDs( self.device0, normal_operation=False )
-                if phlib.PH_SetCFDZeroCross( self.device0, ctypes.c_long(0), self.ZeroCross0 ) < 0: self.shutdown_APDs( self.device0, normal_operation=False )
-                if phlib.PH_SetCFDLevel( self.device0, ctypes.c_long(1), self.Discr1 ) < 0: self.shutdown_APDs( self.device0, normal_operation=False )
-                if phlib.PH_SetCFDZeroCross( self.device0, ctypes.c_long(1), self.ZeroCross1 ) < 0: self.shutdown_APDs( self.device0, normal_operation=False )
+                """ NOTE: this can currently only handle g2-style acquisition (T2) """
+                self.APD = PicoQuant.PicoHarp300.PH300(ch0_zerocross=10, ch0_disc=50, sync_divider=1)
 
             
         def move_focus( self, z ):
@@ -1060,10 +1138,14 @@ if not __name__ == "__main__":
             Publisher().sendMessage("piezos-moved", 'raster')
         
 
-        def move_to_position( self, position ):
-            self.piezoX['control'].SetPositionSmooth( position=position['x'], step=0.25 )
-            self.piezoY['control'].SetPositionSmooth( position=position['y'], step=0.25 )
-            
+        def move_to_position( self, position, smoothly=True ):
+            if smoothly:
+                self.piezoX['control'].SetPositionSmooth( position=position['x'], step=0.25 )
+                self.piezoY['control'].SetPositionSmooth( position=position['y'], step=0.25 )
+            else:
+                self.piezoX['control'].SetPosition( position=position['x'] )
+                self.piezoY['control'].SetPosition( position=position['y'] )
+
             Publisher().sendMessage("piezos-moved", 'raster')
         
         
@@ -1071,30 +1153,31 @@ if not __name__ == "__main__":
         def on_abort( self ):
             self.move_to_position( self.origin )
             self.move_focus( self.origin['z'] )
-            wx.PostEvent(self._parent, ResultEvent(None))
             if self.use_winspec:
                 w32c.pythoncom.CoUninitialize()
             else:
-                self.shutdown_APDs( self.device0 )
+                self.shutdown_APDs()
+            wx.PostEvent(self._parent, ResultEvent(None))
             return False                
 
 
         def on_done( self ):
             self.move_to_position( self.origin )
-            wx.PostEvent(self._parent, ResultEvent(True))
             if self.use_winspec:
                 w32c.pythoncom.CoUninitialize()
             else:
-                self.shutdown_APDs( self.device0 )
+                self.shutdown_APDs()
+            wx.PostEvent(self._parent, ResultEvent(True))
 
 
         def read_APDs( self ):
-            num_acq = 100 # number of queries to average (each ~0.5ms)
-            cps_ch1 = 0.0
-            for i in range(num_acq):
-                cps_ch1 += phlib.PH_GetCountRate( self.device0, self.channel1 )
-
-            self.APD_cps = cps_ch1 / num_acq
+            APD_t_acq = self.APD_t_acq # acquisition time (INTEGER!!!) in ms
+            counts = self.APD.get_counts(APD_t_acq)
+            cps_ch0 = counts[0]/APD_t_acq*1000
+            cps_ch1 = counts[1]/APD_t_acq*1000
+            """ Should make it so you can add Ch0 and Ch1 in g2-style measurement. """
+            #self.APD_cps = cps_ch1 
+            self.APD_cps = cps_ch0 + cps_ch1 
 
 
         def reinitialize_scans( self ):
@@ -1113,31 +1196,38 @@ if not __name__ == "__main__":
                 self.data['z'] = z
                 self.move_focus(z)
                 self.move_to_position( self.raster_points[0] )
-                time.sleep( 2.0 ) # give objective time to settle
+                time.sleep( 1.0 ) # give objective time to settle
                 """ This is a vile hack!!! I'm faking thread communication by setting the value
                     of a list within self.data. A better approach would be to do explicit event
                     handling. But this is so easy...
                 """
-                while self.data['wait_for_save'][0]: pass
+                while self.data['wait_for_save'][0]:
+                    """ Waiting for the last z-scan to be saved to disk. """
+                    pass
+
                 self.reinitialize_scans()
+                wx.PostEvent(self._parent, UpdateEvent(self.data, "Initialized"))
+                time.sleep( 0.25 ) # give objective a bit more time to settle
+                self.get_cmap_matrix()
 
                 for point in self.raster_points:
-                    self.move_to_position( point )
+                    self.move_to_position( point, smoothly=False )
                     if self._want_abort: return self.on_abort()
-                    time.sleep( 0.01 ) # give objective time to move
+                    #time.sleep( 0.01 ) # give objective time to move
                     self.acquire_signal( point, steps_completed )
                     steps_completed += 1
                     if self._want_abort: return self.on_abort()
-                    wx.PostEvent(self._parent, UpdateEvent(self.data))
-                
+                    wx.PostEvent(self._parent, UpdateEvent(self.data, dict(xy=[point['ix'],point['iy']])))
+                    #wx.CallAfter(self.update_colormap)
+
                 if self.scan_3D: wx.PostEvent(self._parent, UpdateEvent(self.data, "Z"))
                 
             self.on_done()
             return True
             
 
-        def shutdown_APDs( self, device, normal_operation=True ):
-            phlib.PH_CloseDevice( device )
+        def shutdown_APDs( self, normal_operation=True ):
+            self.APD.close_device()
             if not normal_operation:
                 #raise ValueError('APD access failed.')
                 print 'Error in APD communication.'
