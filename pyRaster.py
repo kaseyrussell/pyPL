@@ -1180,7 +1180,8 @@ if not __name__ == "__main__":
                 self.piezoX['control'].SetPosition( position=position['x'] )
                 self.piezoY['control'].SetPosition( position=position['y'] )
 
-            Publisher().sendMessage("piezos-moved", 'raster')
+            # Turn off GUI updates to speed things up.
+            #Publisher().sendMessage("piezos-moved", 'raster')
         
         
 
