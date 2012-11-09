@@ -89,32 +89,106 @@ class APTMotor( wx.lib.activex.ActiveXCtrl ):
         return self.ctrl.GetStageAxisInfo_MinPos( channel )
     
     def GetStatusBits_Bits( self, channel=channel1 ):
+        """ Returns the status bits. """
         return self.ctrl.GetStatusBits_Bits( channel )
         
     def MoveAbsoluteEx( self, position_ch1=0.0, position_ch2=0.0,
                        channel=channel1, wait=True ):
+        """
+        Move motor to a specified position.
+
+        *position_ch1*
+            target position (in mm) of channel 1 (the default channel)
+        
+        *position_ch2*
+            target position (in mm) of channel 2. I'm not sure what it
+            means to have different channels...
+        
+        *channel*
+            the channel you want to move. I always use default (channel1).
+        
+        *wait*
+            Wait for the motor to finish moving? Default is True.
+
+        """
         if ( channel==channel1 and 
                 position_ch1 > self.GetStageAxisInfo_MinPos(channel) and
                 position_ch1 < self.GetStageAxisInfo_MaxPos(channel) ): 
             self.PositionCh1 = position_ch1
             return self.ctrl.MoveAbsoluteEx( channel, position_ch1, position_ch2, wait )
 
+
     def MoveRelativeEx( self, relative_dist_ch1=0.0, relative_dist_ch2=0.0,
                        channel=channel1, wait=True ):
         """ I've never tried this function..."""
         return self.ctrl.MoveRelativeEx( channel, relative_dist_ch1, relative_dist_ch2, wait )
     
+
     def SetBLashDist( self, channel=channel1, backlash=0.01 ):
+        """
+        Sets the backlash distance in mm.
+
+        *channel*
+           channel1 by default
+
+        *backlash*
+           distance in mm, 0.01 by default
+         """
         return self.ctrl.SetBLashDist( channel, backlash )
     
+
     def SetHomeParams( self, channel=channel1, direction=home_rev, switch=homelimsw_rev,
                        velocity=1.0, zero_offset=0.1 ):
+        """
+        Set the "home params". I forget what these actually mean.
+
+        *channel*
+            channel1 by default
+
+        *direction*
+            home_rev by default
+
+        *switch*
+            homelimsw_rev by default
+
+        *velocity*
+            1.0 by default
+
+        *zero_offset*
+            0.1 by default.
+
+        """
         return self.ctrl.SetHomeParams( channel, direction, switch, velocity, zero_offset )
         
     def SetStageAxisInfo( self, channel=channel1, minpos=0.0, maxpos=12.0, pitch=1.0, units=units_mm ):
+        """
+        Set the stage axis info.
+
+        *channel*
+            channel1 by default
+
+        *minpos*
+            0.0 (mm) by default
+
+        *maxpos*
+            12.0 (mm) by default
+
+        *pitch*
+            1.0 by default
+
+        *units*
+            units_mm by default
+
+        """
         return self.ctrl.SetStageAxisInfo( channel, minpos, maxpos, units, pitch, 1 )
         
     def SetStepSize( self, stepsize ):
+        """
+        Set the step size for the StepUp and StepDown methods.
+
+        *stepsize*
+            step size in mm.
+        """
         self.StepSize = stepsize
     
     def SetSWPosLimits( self, channel=channel1, minpos=0.0, maxpos=12.0, limitmode=break_type_switch ):
@@ -126,8 +200,24 @@ class APTMotor( wx.lib.activex.ActiveXCtrl ):
         return self.ctrl.SetVelParams( channel, minvelocity, acceleration, maxvelocity)
     
     def StepUp( self, channel=channel1, wait=True, polarity=1.0, stepsize='default' ):
-        """ I didn't call this Jog because I couldn't get the SetJogStepSize method to work.
-            This is a hack that sets the position absolutely using a global step variable. """
+        """
+        I didn't call this Jog because I couldn't get the SetJogStepSize method to work.
+        This is a hack that sets the position absolutely using a global step variable.
+
+        *channel*
+            channel1 by default.
+
+        *wait*
+            wait for motor to finish moving? True by default.
+
+        *polarity*
+            "Up" is a relative term, but the motor position is absolute, so this
+            parameter can be used to invert what you mean by "up".
+
+        *stepsize*
+            By default, use the value set by the SetStepSize method.
+
+        """
         if stepsize == 'default': stepsize = self.StepSize
         newlocation = self.GetPosition(channel)+stepsize*polarity
         if ( channel==channel1 and 
@@ -137,8 +227,24 @@ class APTMotor( wx.lib.activex.ActiveXCtrl ):
             self.MoveAbsoluteEx( self.PositionCh1, self.PositionCh2, channel, wait )
         
     def StepDown( self, channel=channel1, wait=True, polarity=1.0, stepsize='default' ):
-        """ I didn't call this Jog because I couldn't get the SetJogStepSize method to work.
-            This is a hack that sets the position absolutely using a global step variable. """
+        """
+        I didn't call this Jog because I couldn't get the SetJogStepSize method to work.
+        This is a hack that sets the position absolutely using a global step variable.
+
+        *channel*
+            channel1 by default.
+
+        *wait*
+            wait for motor to finish moving? True by default.
+
+        *polarity*
+            "Down" is a relative term, but the motor position is absolute, so this
+            parameter can be used to invert what you mean by "down".
+
+        *stepsize*
+            By default, use the value set by the SetStepSize method.
+
+        """
         if stepsize == 'default': stepsize = self.StepSize
         newlocation = self.GetPosition(channel)-stepsize*polarity
         if ( channel==channel1 and 
@@ -148,4 +254,6 @@ class APTMotor( wx.lib.activex.ActiveXCtrl ):
             self.MoveAbsoluteEx( self.PositionCh1, self.PositionCh2, channel, wait )
         
     def StopImmediate( self, channel=channel1 ):
+        """ Stops the motor from moving (although this won't overcome the strange ActiveX
+        phantom-motor-moving issue where the control says it is moving but actually isn't. """
         return self.ctrl.StopImmediate( channel )

@@ -1,0 +1,353 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>APTMotorControl &mdash; pyPL 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="pyPL 1.0 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">pyPL 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for APTMotorControl</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; In an ideal world, this will be a complete working library</span>
+<span class="sd">    for the APTMotor</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx.lib.activex</span>
+<span class="kn">import</span> <span class="nn">comtypes.client</span> <span class="kn">as</span> <span class="nn">cc</span>
+<span class="kn">from</span> <span class="nn">ctypes</span> <span class="kn">import</span> <span class="n">byref</span><span class="p">,</span> <span class="n">pointer</span><span class="p">,</span> <span class="n">c_long</span><span class="p">,</span> <span class="n">c_float</span><span class="p">,</span> <span class="n">c_bool</span>
+
+<span class="c">##cc.GetModule( (&#39;{9460A175-8618-4753-B337-61D9771C4C14}&#39;, 1, 0) )</span>
+<span class="c">##progID_system = &#39;MG17SYSTEM.MG17SystemCtrl.1&#39;</span>
+<span class="c">##import comtypes.gen.MG17SystemLib as MGsys</span>
+
+<span class="n">cc</span><span class="o">.</span><span class="n">GetModule</span><span class="p">(</span> <span class="p">(</span><span class="s">&#39;{2A833923-9AA7-4C45-90AC-DA4F19DC24D1}&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="p">)</span>
+<span class="n">progID_motor</span> <span class="o">=</span> <span class="s">&#39;MGMOTOR.MGMotorCtrl.1&#39;</span>
+<span class="kn">import</span> <span class="nn">comtypes.gen.MG17MotorLib</span> <span class="kn">as</span> <span class="nn">APTMotorLib</span>
+<span class="n">channel1</span> <span class="o">=</span> <span class="n">APTMotorLib</span><span class="o">.</span><span class="n">CHAN1_ID</span>
+<span class="n">channel2</span> <span class="o">=</span> <span class="n">APTMotorLib</span><span class="o">.</span><span class="n">CHAN2_ID</span>
+<span class="n">break_type_switch</span> <span class="o">=</span> <span class="n">APTMotorLib</span><span class="o">.</span><span class="n">HWLIMSW_BREAKS</span>
+<span class="n">units_mm</span> <span class="o">=</span> <span class="n">APTMotorLib</span><span class="o">.</span><span class="n">UNITS_MM</span>
+<span class="n">home_rev</span> <span class="o">=</span> <span class="n">APTMotorLib</span><span class="o">.</span><span class="n">HOME_REV</span>
+<span class="n">homelimsw_rev</span> <span class="o">=</span> <span class="n">APTMotorLib</span><span class="o">.</span><span class="n">HOMELIMSW_REV_HW</span>
+<span class="n">motor_moving_bits</span> <span class="o">=</span>  <span class="o">-</span><span class="mi">2147478512</span>
+<span class="n">motor_stopped_not_homed_bits</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2147479552</span>
+<span class="n">motor_stopped_and_homed_bits</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2147478528</span>
+
+<div class="viewcode-block" id="APTMotor"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor">[docs]</a><span class="k">class</span> <span class="nc">APTMotor</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">activex</span><span class="o">.</span><span class="n">ActiveXCtrl</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The Motor class derives from wx.lib.activex.ActiveXCtrl, which</span>
+<span class="sd">       is where all the heavy lifting with COM gets done.&quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">HWSerialNum</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">pos</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">DefaultPosition</span><span class="p">,</span>
+                 <span class="n">size</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">DefaultSize</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;Stepper Motor&#39;</span> <span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">activex</span><span class="o">.</span><span class="n">ActiveXCtrl</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">progID_motor</span><span class="p">,</span>
+                                            <span class="nb">id</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">style</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">HWSerialNum</span> <span class="o">=</span> <span class="n">HWSerialNum</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">StartCtrl</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">EnableHWChannel</span><span class="p">(</span> <span class="n">channel1</span> <span class="p">)</span>
+        
+        <span class="sd">&quot;&quot;&quot; Global variables:&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">StepSize</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="c"># initial step size (mm)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh2</span> <span class="o">=</span> <span class="mf">0.0</span>
+    
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">StopCtrl</span><span class="p">()</span>
+
+<div class="viewcode-block" id="APTMotor.MotorIsNotMoving"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.MotorIsNotMoving">[docs]</a>    <span class="k">def</span> <span class="nf">MotorIsNotMoving</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        checks if the status bits of the motor indicate that the motor is stopped</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetStatusBits_Bits</span><span class="p">(</span> <span class="n">channel</span> <span class="p">)</span> <span class="ow">in</span> <span class="p">[</span> <span class="n">motor_stopped_not_homed_bits</span><span class="p">,</span> <span class="n">motor_stopped_and_homed_bits</span><span class="p">]</span>
+    </div>
+    <span class="k">def</span> <span class="nf">GetJogStepSize</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span> <span class="p">):</span>
+        <span class="n">stepsize</span> <span class="o">=</span> <span class="n">c_float</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">GetJogStepSize</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span> <span class="n">stepsize</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">stepsize</span><span class="o">.</span><span class="n">value</span>
+    
+    <span class="k">def</span> <span class="nf">GetPosition</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span> <span class="p">):</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="n">c_float</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">GetPosition</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span><span class="n">position</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">channel</span><span class="o">==</span><span class="n">channel1</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="o">=</span> <span class="n">position</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">return</span> <span class="n">position</span><span class="o">.</span><span class="n">value</span>
+    
+<div class="viewcode-block" id="APTMotor.GetStageAxisInfo"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.GetStageAxisInfo">[docs]</a>    <span class="k">def</span> <span class="nf">GetStageAxisInfo</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns a tuple of:</span>
+<span class="sd">            min position, max position, units, pitch, and direction&quot;&quot;&quot;</span>
+        <span class="n">min_position</span> <span class="o">=</span> <span class="n">c_float</span><span class="p">()</span>
+        <span class="n">max_position</span> <span class="o">=</span> <span class="n">c_float</span><span class="p">()</span>
+        <span class="n">units</span> <span class="o">=</span> <span class="n">c_long</span><span class="p">()</span>
+        <span class="n">pitch</span> <span class="o">=</span> <span class="n">c_float</span><span class="p">()</span>
+        <span class="n">direction</span> <span class="o">=</span> <span class="n">c_long</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">GetStageAxisInfo</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span><span class="n">min_position</span><span class="p">),</span>
+                                          <span class="n">byref</span><span class="p">(</span><span class="n">max_position</span><span class="p">),</span> <span class="n">byref</span><span class="p">(</span><span class="n">units</span><span class="p">),</span>
+                                          <span class="n">byref</span><span class="p">(</span><span class="n">pitch</span><span class="p">),</span> <span class="n">byref</span><span class="p">(</span><span class="n">direction</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">min_position</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">max_position</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">units</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">pitch</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">direction</span><span class="o">.</span><span class="n">value</span>
+</div>
+<div class="viewcode-block" id="APTMotor.GetStageAxisInfo_MaxPos"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.GetStageAxisInfo_MaxPos">[docs]</a>    <span class="k">def</span> <span class="nf">GetStageAxisInfo_MaxPos</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the maximum position of the stage that is accessible using</span>
+<span class="sd">            the MoveAbsoluteEx or MoveRelativeEx commands, although you</span>
+<span class="sd">            may be able to exceed it by Jogging. I think this is a</span>
+<span class="sd">            user-settable quantity. For the small stepper we have,</span>
+<span class="sd">            the max travel is like 18mm. (Or should be ~25mm?) &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">GetStageAxisInfo_MaxPos</span><span class="p">(</span> <span class="n">channel</span> <span class="p">)</span>
+</div>
+<div class="viewcode-block" id="APTMotor.GetStageAxisInfo_MinPos"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.GetStageAxisInfo_MinPos">[docs]</a>    <span class="k">def</span> <span class="nf">GetStageAxisInfo_MinPos</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the minimum position of the stage that is accessible using</span>
+<span class="sd">            the MoveAbsoluteEx or MoveRelativeEx commands, although you</span>
+<span class="sd">            may be able to exceed it by Jogging. I think this is a</span>
+<span class="sd">            user-settable quantity. For the small stepper we have, if</span>
+<span class="sd">            it&#39;s been &quot;homed&quot; then it sets 0 to be the minimum position.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">GetStageAxisInfo_MinPos</span><span class="p">(</span> <span class="n">channel</span> <span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="APTMotor.GetStatusBits_Bits"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.GetStatusBits_Bits">[docs]</a>    <span class="k">def</span> <span class="nf">GetStatusBits_Bits</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the status bits. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">GetStatusBits_Bits</span><span class="p">(</span> <span class="n">channel</span> <span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="APTMotor.MoveAbsoluteEx"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.MoveAbsoluteEx">[docs]</a>    <span class="k">def</span> <span class="nf">MoveAbsoluteEx</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">position_ch1</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">position_ch2</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                       <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="bp">True</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Move motor to a specified position.</span>
+
+<span class="sd">        *position_ch1*</span>
+<span class="sd">            target position (in mm) of channel 1 (the default channel)</span>
+<span class="sd">        </span>
+<span class="sd">        *position_ch2*</span>
+<span class="sd">            target position (in mm) of channel 2. I&#39;m not sure what it</span>
+<span class="sd">            means to have different channels...</span>
+<span class="sd">        </span>
+<span class="sd">        *channel*</span>
+<span class="sd">            the channel you want to move. I always use default (channel1).</span>
+<span class="sd">        </span>
+<span class="sd">        *wait*</span>
+<span class="sd">            Wait for the motor to finish moving? Default is True.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="n">channel</span><span class="o">==</span><span class="n">channel1</span> <span class="ow">and</span> 
+                <span class="n">position_ch1</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetStageAxisInfo_MinPos</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="n">position_ch1</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetStageAxisInfo_MaxPos</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span> <span class="p">):</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="o">=</span> <span class="n">position_ch1</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">MoveAbsoluteEx</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">position_ch1</span><span class="p">,</span> <span class="n">position_ch2</span><span class="p">,</span> <span class="n">wait</span> <span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="APTMotor.MoveRelativeEx"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.MoveRelativeEx">[docs]</a>    <span class="k">def</span> <span class="nf">MoveRelativeEx</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">relative_dist_ch1</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">relative_dist_ch2</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                       <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="bp">True</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; I&#39;ve never tried this function...&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">MoveRelativeEx</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">relative_dist_ch1</span><span class="p">,</span> <span class="n">relative_dist_ch2</span><span class="p">,</span> <span class="n">wait</span> <span class="p">)</span>
+    
+</div>
+<div class="viewcode-block" id="APTMotor.SetBLashDist"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.SetBLashDist">[docs]</a>    <span class="k">def</span> <span class="nf">SetBLashDist</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">backlash</span><span class="o">=</span><span class="mf">0.01</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the backlash distance in mm.</span>
+
+<span class="sd">        *channel*</span>
+<span class="sd">           channel1 by default</span>
+
+<span class="sd">        *backlash*</span>
+<span class="sd">           distance in mm, 0.01 by default</span>
+<span class="sd">         &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">SetBLashDist</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">backlash</span> <span class="p">)</span>
+    
+</div>
+<div class="viewcode-block" id="APTMotor.SetHomeParams"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.SetHomeParams">[docs]</a>    <span class="k">def</span> <span class="nf">SetHomeParams</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="n">home_rev</span><span class="p">,</span> <span class="n">switch</span><span class="o">=</span><span class="n">homelimsw_rev</span><span class="p">,</span>
+                       <span class="n">velocity</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">zero_offset</span><span class="o">=</span><span class="mf">0.1</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the &quot;home params&quot;. I forget what these actually mean.</span>
+
+<span class="sd">        *channel*</span>
+<span class="sd">            channel1 by default</span>
+
+<span class="sd">        *direction*</span>
+<span class="sd">            home_rev by default</span>
+
+<span class="sd">        *switch*</span>
+<span class="sd">            homelimsw_rev by default</span>
+
+<span class="sd">        *velocity*</span>
+<span class="sd">            1.0 by default</span>
+
+<span class="sd">        *zero_offset*</span>
+<span class="sd">            0.1 by default.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">SetHomeParams</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">switch</span><span class="p">,</span> <span class="n">velocity</span><span class="p">,</span> <span class="n">zero_offset</span> <span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="APTMotor.SetStageAxisInfo"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.SetStageAxisInfo">[docs]</a>    <span class="k">def</span> <span class="nf">SetStageAxisInfo</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">minpos</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">maxpos</span><span class="o">=</span><span class="mf">12.0</span><span class="p">,</span> <span class="n">pitch</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="n">units_mm</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the stage axis info.</span>
+
+<span class="sd">        *channel*</span>
+<span class="sd">            channel1 by default</span>
+
+<span class="sd">        *minpos*</span>
+<span class="sd">            0.0 (mm) by default</span>
+
+<span class="sd">        *maxpos*</span>
+<span class="sd">            12.0 (mm) by default</span>
+
+<span class="sd">        *pitch*</span>
+<span class="sd">            1.0 by default</span>
+
+<span class="sd">        *units*</span>
+<span class="sd">            units_mm by default</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">SetStageAxisInfo</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">minpos</span><span class="p">,</span> <span class="n">maxpos</span><span class="p">,</span> <span class="n">units</span><span class="p">,</span> <span class="n">pitch</span><span class="p">,</span> <span class="mi">1</span> <span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="APTMotor.SetStepSize"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.SetStepSize">[docs]</a>    <span class="k">def</span> <span class="nf">SetStepSize</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">stepsize</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the step size for the StepUp and StepDown methods.</span>
+
+<span class="sd">        *stepsize*</span>
+<span class="sd">            step size in mm.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">StepSize</span> <span class="o">=</span> <span class="n">stepsize</span>
+    </div>
+<div class="viewcode-block" id="APTMotor.SetSWPosLimits"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.SetSWPosLimits">[docs]</a>    <span class="k">def</span> <span class="nf">SetSWPosLimits</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">minpos</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">maxpos</span><span class="o">=</span><span class="mf">12.0</span><span class="p">,</span> <span class="n">limitmode</span><span class="o">=</span><span class="n">break_type_switch</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; I don&#39;t quite understand what this does.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">SetSWPosLimits</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">minpos</span><span class="p">,</span> <span class="n">maxpos</span><span class="p">,</span> <span class="n">limitmode</span> <span class="p">)</span>
+</div>
+<div class="viewcode-block" id="APTMotor.SetVelParams"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.SetVelParams">[docs]</a>    <span class="k">def</span> <span class="nf">SetVelParams</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">minvelocity</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">maxvelocity</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">acceleration</span><span class="o">=</span><span class="mf">4.0</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; what is minvelocity? doesn&#39;t seem to be in the panel control options...&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">SetVelParams</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">minvelocity</span><span class="p">,</span> <span class="n">acceleration</span><span class="p">,</span> <span class="n">maxvelocity</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="APTMotor.StepUp"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.StepUp">[docs]</a>    <span class="k">def</span> <span class="nf">StepUp</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">polarity</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">stepsize</span><span class="o">=</span><span class="s">&#39;default&#39;</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        I didn&#39;t call this Jog because I couldn&#39;t get the SetJogStepSize method to work.</span>
+<span class="sd">        This is a hack that sets the position absolutely using a global step variable.</span>
+
+<span class="sd">        *channel*</span>
+<span class="sd">            channel1 by default.</span>
+
+<span class="sd">        *wait*</span>
+<span class="sd">            wait for motor to finish moving? True by default.</span>
+
+<span class="sd">        *polarity*</span>
+<span class="sd">            &quot;Up&quot; is a relative term, but the motor position is absolute, so this</span>
+<span class="sd">            parameter can be used to invert what you mean by &quot;up&quot;.</span>
+
+<span class="sd">        *stepsize*</span>
+<span class="sd">            By default, use the value set by the SetStepSize method.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">stepsize</span> <span class="o">==</span> <span class="s">&#39;default&#39;</span><span class="p">:</span> <span class="n">stepsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">StepSize</span>
+        <span class="n">newlocation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPosition</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span><span class="o">+</span><span class="n">stepsize</span><span class="o">*</span><span class="n">polarity</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="n">channel</span><span class="o">==</span><span class="n">channel1</span> <span class="ow">and</span> 
+                <span class="n">newlocation</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetStageAxisInfo_MinPos</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="n">newlocation</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetStageAxisInfo_MaxPos</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span> <span class="p">):</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="o">=</span> <span class="n">newlocation</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">MoveAbsoluteEx</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh2</span><span class="p">,</span> <span class="n">channel</span><span class="p">,</span> <span class="n">wait</span> <span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="APTMotor.StepDown"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.StepDown">[docs]</a>    <span class="k">def</span> <span class="nf">StepDown</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">polarity</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">stepsize</span><span class="o">=</span><span class="s">&#39;default&#39;</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        I didn&#39;t call this Jog because I couldn&#39;t get the SetJogStepSize method to work.</span>
+<span class="sd">        This is a hack that sets the position absolutely using a global step variable.</span>
+
+<span class="sd">        *channel*</span>
+<span class="sd">            channel1 by default.</span>
+
+<span class="sd">        *wait*</span>
+<span class="sd">            wait for motor to finish moving? True by default.</span>
+
+<span class="sd">        *polarity*</span>
+<span class="sd">            &quot;Down&quot; is a relative term, but the motor position is absolute, so this</span>
+<span class="sd">            parameter can be used to invert what you mean by &quot;down&quot;.</span>
+
+<span class="sd">        *stepsize*</span>
+<span class="sd">            By default, use the value set by the SetStepSize method.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">stepsize</span> <span class="o">==</span> <span class="s">&#39;default&#39;</span><span class="p">:</span> <span class="n">stepsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">StepSize</span>
+        <span class="n">newlocation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPosition</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span><span class="o">-</span><span class="n">stepsize</span><span class="o">*</span><span class="n">polarity</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="n">channel</span><span class="o">==</span><span class="n">channel1</span> <span class="ow">and</span> 
+                <span class="n">newlocation</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetStageAxisInfo_MinPos</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="n">newlocation</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetStageAxisInfo_MaxPos</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span> <span class="p">):</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="o">=</span> <span class="n">newlocation</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">MoveAbsoluteEx</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh2</span><span class="p">,</span> <span class="n">channel</span><span class="p">,</span> <span class="n">wait</span> <span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="APTMotor.StopImmediate"><a class="viewcode-back" href="../APTMotorControl.html#APTMotorControl.APTMotor.StopImmediate">[docs]</a>    <span class="k">def</span> <span class="nf">StopImmediate</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Stops the motor from moving (although this won&#39;t overcome the strange ActiveX</span>
+<span class="sd">        phantom-motor-moving issue where the control says it is moving but actually isn&#39;t. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">StopImmediate</span><span class="p">(</span> <span class="n">channel</span> <span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">pyPL 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Kasey J. Russell.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

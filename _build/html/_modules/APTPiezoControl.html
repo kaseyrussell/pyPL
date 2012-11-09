@@ -1,0 +1,199 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>APTPiezoControl &mdash; pyPL 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="pyPL 1.0 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">pyPL 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for APTPiezoControl</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; In an ideal world, this will be a complete working library</span>
+<span class="sd">    for the APTPiezo</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx.lib.activex</span>
+<span class="kn">import</span> <span class="nn">comtypes.client</span> <span class="kn">as</span> <span class="nn">cc</span>
+<span class="kn">from</span> <span class="nn">ctypes</span> <span class="kn">import</span> <span class="n">byref</span><span class="p">,</span> <span class="n">pointer</span><span class="p">,</span> <span class="n">c_long</span><span class="p">,</span> <span class="n">c_float</span><span class="p">,</span> <span class="n">c_bool</span>
+<span class="kn">from</span> <span class="nn">wx.lib.pubsub</span> <span class="kn">import</span> <span class="n">Publisher</span>
+
+<span class="c">##cc.GetModule( (&#39;{9460A175-8618-4753-B337-61D9771C4C14}&#39;, 1, 0) )</span>
+<span class="c">##progID_system = &#39;MG17SYSTEM.MG17SystemCtrl.1&#39;</span>
+<span class="c">##import comtypes.gen.MG17SystemLib as MGsys</span>
+
+<span class="n">cc</span><span class="o">.</span><span class="n">GetModule</span><span class="p">(</span> <span class="p">(</span><span class="s">&#39;{E2D00F25-2208-493D-87D4-7D9369EA5F06}&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="p">)</span>
+<span class="n">progID_piezo</span> <span class="o">=</span> <span class="s">&#39;MGPIEZO.MGPiezoCtrl.1&#39;</span>
+<span class="kn">import</span> <span class="nn">comtypes.gen.MG17PiezoLib</span> <span class="kn">as</span> <span class="nn">APTPiezoLib</span>
+<span class="n">channel1</span> <span class="o">=</span> <span class="n">APTPiezoLib</span><span class="o">.</span><span class="n">CHAN1_ID</span>
+<span class="n">channel2</span> <span class="o">=</span> <span class="n">APTPiezoLib</span><span class="o">.</span><span class="n">CHAN2_ID</span>
+<span class="n">display_position</span> <span class="o">=</span> <span class="n">APTPiezoLib</span><span class="o">.</span><span class="n">DISP_POS</span>
+<span class="n">control_mode_position</span> <span class="o">=</span> <span class="n">APTPiezoLib</span><span class="o">.</span><span class="n">POSCONTROLMODE</span>
+<span class="n">closed_loop_mode</span> <span class="o">=</span> <span class="n">APTPiezoLib</span><span class="o">.</span><span class="n">CLOSED_LOOP</span>
+
+<div class="viewcode-block" id="APTPiezo"><a class="viewcode-back" href="../APTPiezoControl.html#APTPiezoControl.APTPiezo">[docs]</a><span class="k">class</span> <span class="nc">APTPiezo</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">activex</span><span class="o">.</span><span class="n">ActiveXCtrl</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The Piezo class derives from wx.lib.activex.ActiveXCtrl, which</span>
+<span class="sd">       is where all the heavy lifting with COM gets done.&quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">HWSerialNum</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">pos</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">DefaultPosition</span><span class="p">,</span>
+                 <span class="n">size</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">DefaultSize</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;Piezo&#39;</span> <span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">activex</span><span class="o">.</span><span class="n">ActiveXCtrl</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">progID_piezo</span><span class="p">,</span>
+                                            <span class="nb">id</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">style</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">HWSerialNum</span> <span class="o">=</span> <span class="n">HWSerialNum</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">StartCtrl</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">EnableHWChannel</span><span class="p">(</span> <span class="n">channel1</span> <span class="p">)</span>
+        
+        <span class="sd">&quot;&quot;&quot; Global variables:&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">StepSize</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="c"># initial step size (microns)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_position</span> <span class="o">=</span> <span class="mf">20.0</span> <span class="c"># microns</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_position</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="c"># microns</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh2</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">(</span> <span class="n">position</span><span class="o">=</span><span class="mf">0.0</span> <span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">StopCtrl</span><span class="p">()</span>
+
+<div class="viewcode-block" id="APTPiezo.GetPosition"><a class="viewcode-back" href="../APTPiezoControl.html#APTPiezoControl.APTPiezo.GetPosition">[docs]</a>    <span class="k">def</span> <span class="nf">GetPosition</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; returns position in microns &quot;&quot;&quot;</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="n">c_float</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">GetPosOutput</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span><span class="n">position</span><span class="p">)</span> <span class="p">)</span>
+        <span class="k">if</span> <span class="n">channel</span><span class="o">==</span><span class="n">channel1</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="o">=</span> <span class="n">position</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">return</span> <span class="n">position</span><span class="o">.</span><span class="n">value</span>
+        
+<span class="c">#    def SetToPositionControlMode( self, channel=channel1 ):</span>
+<span class="c">#        return self.ctrl.SetHWMode( channel, control_mode_position )</span>
+        </div>
+    <span class="k">def</span> <span class="nf">SetToClosedLoopMode</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span> <span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">SetControlMode</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">closed_loop_mode</span> <span class="p">)</span>
+        
+<div class="viewcode-block" id="APTPiezo.SetPosition"><a class="viewcode-back" href="../APTPiezoControl.html#APTPiezoControl.APTPiezo.SetPosition">[docs]</a>    <span class="k">def</span> <span class="nf">SetPosition</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="mf">0.0</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;sets position in microns, only set up for channel1 at this point.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="n">channel</span><span class="o">==</span><span class="n">channel1</span> <span class="ow">and</span>
+             <span class="n">position</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_position</span> <span class="ow">and</span>
+             <span class="n">position</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_position</span> <span class="p">):</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="o">=</span> <span class="n">position</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">SetPosOutput</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">position</span> <span class="p">)</span>
+</div>
+<div class="viewcode-block" id="APTPiezo.SetPositionSmooth"><a class="viewcode-back" href="../APTPiezoControl.html#APTPiezoControl.APTPiezo.SetPositionSmooth">[docs]</a>    <span class="k">def</span> <span class="nf">SetPositionSmooth</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mf">0.25</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sets position in microns, only set up for channel1 at this point.</span>
+<span class="sd">           Moves to final position in a series of steps. Just runs SetPosition over a while loop.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="n">channel</span> <span class="o">==</span> <span class="n">channel2</span> <span class="ow">or</span>
+            <span class="n">position</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_position</span> <span class="ow">or</span>
+            <span class="n">position</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_position</span> <span class="p">):</span>
+            <span class="k">return</span>
+        
+        <span class="k">if</span> <span class="n">position</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span><span class="p">:</span>
+            <span class="n">direction</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">direction</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        
+        <span class="k">while</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="o">-</span> <span class="n">position</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">step</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span><span class="o">+</span><span class="n">step</span><span class="o">*</span><span class="n">direction</span> <span class="p">)</span>
+            
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="n">position</span> <span class="p">)</span>
+</div>
+<div class="viewcode-block" id="APTPiezo.SetStepSize"><a class="viewcode-back" href="../APTPiezoControl.html#APTPiezoControl.APTPiezo.SetStepSize">[docs]</a>    <span class="k">def</span> <span class="nf">SetStepSize</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">stepsize</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; step size is in microns &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">StepSize</span> <span class="o">=</span> <span class="n">stepsize</span>
+    </div>
+<div class="viewcode-block" id="APTPiezo.SetToDisplayPosition"><a class="viewcode-back" href="../APTPiezoControl.html#APTPiezoControl.APTPiezo.SetToDisplayPosition">[docs]</a>    <span class="k">def</span> <span class="nf">SetToDisplayPosition</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Set the controller box to display position rather than volts. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">SetVoltPosDispMode</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="n">display_position</span> <span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="APTPiezo.StepUp"><a class="viewcode-back" href="../APTPiezoControl.html#APTPiezoControl.APTPiezo.StepUp">[docs]</a>    <span class="k">def</span> <span class="nf">StepUp</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">stepsize</span><span class="o">=</span><span class="s">&#39;default&#39;</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; I didn&#39;t call this Jog because </span>
+<span class="sd">            this is a hack that sets the position absolutely using a global step variable. &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">stepsize</span> <span class="o">==</span> <span class="s">&#39;default&#39;</span><span class="p">:</span> <span class="n">stepsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">StepSize</span>
+        <span class="k">if</span> <span class="n">channel</span><span class="o">==</span><span class="n">channel1</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPosition</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span><span class="o">+</span><span class="n">stepsize</span><span class="o">*</span><span class="n">direction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="APTPiezo.StepDown"><a class="viewcode-back" href="../APTPiezoControl.html#APTPiezoControl.APTPiezo.StepDown">[docs]</a>    <span class="k">def</span> <span class="nf">StepDown</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel1</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">stepsize</span><span class="o">=</span><span class="s">&#39;default&#39;</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; I didn&#39;t call this Jog because </span>
+<span class="sd">            this is a hack that sets the position absolutely using a global step variable. &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">stepsize</span> <span class="o">==</span> <span class="s">&#39;default&#39;</span><span class="p">:</span> <span class="n">stepsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">StepSize</span>
+        <span class="k">if</span> <span class="n">channel</span><span class="o">==</span><span class="n">channel1</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPosition</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span><span class="o">-</span><span class="n">stepsize</span><span class="o">*</span><span class="n">direction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">(</span> <span class="n">channel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">PositionCh1</span> <span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">pyPL 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Kasey J. Russell.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,408 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>joystick_control &mdash; pyPL 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="pyPL 1.0 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">pyPL 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for joystick_control</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+<span class="c"># I stole this from the following url and customized it to motion control. -- KJR 21Aug2010</span>
+<span class="c"># it&#39;s now meant as a stand-alone module to run within a child DAEMON thread and monitor the joystick.</span>
+<span class="c">#</span>
+<span class="c"># http://principialabs.com/joystick-control-of-a-servo/</span>
+<span class="c"># created 19 December 2007</span>
+<span class="c"># copyleft 2007 Brian D. Wendt</span>
+<span class="c"># http://principialabs.com/</span>
+
+<span class="kn">import</span> <span class="nn">pygame</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">wx.lib.pubsub</span> <span class="kn">import</span> <span class="n">Publisher</span>
+
+
+<span class="c"># control piezos at the start; trigger button will toggle between the two</span>
+<span class="n">piezos</span> <span class="o">=</span> <span class="s">&#39;piezos&#39;</span>
+<span class="n">motors</span> <span class="o">=</span> <span class="s">&#39;motors&#39;</span>
+<span class="n">motors_or_piezos</span> <span class="o">=</span> <span class="n">piezos</span>
+
+<span class="n">min_motor_step</span> <span class="o">=</span> <span class="mf">0.001</span> <span class="c"># mm</span>
+<span class="n">max_motor_step</span> <span class="o">=</span> <span class="mf">0.02</span>   <span class="c"># mm</span>
+<span class="n">min_piezo_step</span> <span class="o">=</span> <span class="mf">0.05</span>  <span class="c"># microns</span>
+<span class="n">max_piezo_step</span> <span class="o">=</span> <span class="mf">2.0</span>   <span class="c"># microns</span>
+<span class="n">joystick_threshold</span> <span class="o">=</span> <span class="mf">0.15</span> <span class="c"># minimum joystick movement needed to trigger motion</span>
+
+<span class="c"># associate buttons: (take this value and add one to get the number actually printed on the joystick)</span>
+<span class="n">toggle_motors_piezos_button</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">center_piezos_button</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">focusing_button</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">stop_button</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">piezos_button</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">WinSpecFocus_button</span> <span class="o">=</span> <span class="mi">7</span>
+<span class="n">CameraFocus_button</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">toggle_coarse_fine_button</span> <span class="o">=</span> <span class="mi">9</span>
+<span class="n">toggle_wobble_button</span> <span class="o">=</span> <span class="mi">666</span> <span class="c"># just turn this off! 10</span>
+
+<span class="n">fine_control</span> <span class="o">=</span> <span class="bp">True</span> <span class="c"># this will only affect motors, not piezos.</span>
+<span class="n">focusing</span> <span class="o">=</span> <span class="bp">False</span>
+
+<div class="viewcode-block" id="calc_stepsize"><a class="viewcode-back" href="../joystick_control.html#joystick_control.calc_stepsize">[docs]</a><span class="k">def</span> <span class="nf">calc_stepsize</span><span class="p">(</span> <span class="n">Z</span><span class="p">,</span> <span class="n">motors_or_piezos</span><span class="p">,</span> <span class="n">fine_control</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; throttle position sets the step size... algorithm will likely need fine tuning &quot;&quot;&quot;</span>
+    <span class="n">Z</span> <span class="o">+=</span> <span class="mf">1.0</span> <span class="c"># this makes the minimum value 0.0 rather than -1</span>
+    <span class="k">if</span> <span class="n">motors_or_piezos</span> <span class="o">==</span> <span class="n">motors</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">fine_control</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Z</span><span class="o">*</span><span class="n">max_motor_step</span> <span class="o">+</span> <span class="n">min_motor_step</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Z</span><span class="o">*</span><span class="n">max_motor_step</span><span class="o">*</span><span class="mi">10</span> <span class="o">+</span> <span class="n">min_motor_step</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Z</span><span class="o">*</span><span class="n">max_piezo_step</span> <span class="o">+</span> <span class="n">min_piezo_step</span>
+    </div>
+<div class="viewcode-block" id="center_piezos"><a class="viewcode-back" href="../joystick_control.html#joystick_control.center_piezos">[docs]</a><span class="k">def</span> <span class="nf">center_piezos</span><span class="p">(</span> <span class="n">positioners</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Center the piezos within their range. &quot;&quot;&quot;</span>
+    <span class="n">piezoX</span> <span class="o">=</span> <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;piezoX&#39;</span><span class="p">]</span>
+    <span class="n">piezoY</span> <span class="o">=</span> <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;piezoY&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">piezoX</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">piezoX</span><span class="p">[</span><span class="s">&#39;control&#39;</span><span class="p">]</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">SetPositionSmooth</span><span class="p">(</span> <span class="n">position</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">min_position</span> <span class="o">+</span> <span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">max_position</span> <span class="o">-</span> <span class="n">p</span><span class="o">.</span><span class="n">min_position</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mf">0.25</span> <span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">piezoY</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">piezoY</span><span class="p">[</span><span class="s">&#39;control&#39;</span><span class="p">]</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">SetPositionSmooth</span><span class="p">(</span> <span class="n">position</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">min_position</span> <span class="o">+</span> <span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">max_position</span> <span class="o">-</span> <span class="n">p</span><span class="o">.</span><span class="n">min_position</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mf">0.25</span> <span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="get_joystick_position"><a class="viewcode-back" href="../joystick_control.html#joystick_control.get_joystick_position">[docs]</a><span class="k">def</span> <span class="nf">get_joystick_position</span><span class="p">(</span> <span class="n">joystick</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Returns joystick position in X,Y, and Z (where Z is throttle).</span>
+<span class="sd">    All three of these values should be in the range -1 to 1 &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span> <span class="n">X</span><span class="o">=</span><span class="n">joystick</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">Y</span><span class="o">=-</span><span class="n">joystick</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">Z</span><span class="o">=-</span><span class="n">joystick</span><span class="o">.</span><span class="n">get_axis</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="p">)</span>
+</div>
+<div class="viewcode-block" id="init_autoit"><a class="viewcode-back" href="../joystick_control.html#joystick_control.init_autoit">[docs]</a><span class="k">def</span> <span class="nf">init_autoit</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot; Initialize AutoIT module. &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">os</span>
+
+    <span class="c"># Import the Win32 COM client</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">win32com.client</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">,</span> <span class="s">&#39;This program requires the pywin32 extensions for Python. See http://starship.python.net/crew/mhammond/win32/&#39;</span>
+    
+    <span class="kn">import</span> <span class="nn">pywintypes</span> <span class="c"># to handle COM errors.</span>
+    
+    <span class="c"># Import AutoIT (first try)</span>
+    <span class="n">autoit</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">autoit</span> <span class="o">=</span> <span class="n">win32com</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">Dispatch</span><span class="p">(</span><span class="s">&quot;AutoItX3.Control&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">pywintypes</span><span class="o">.</span><span class="n">com_error</span><span class="p">:</span>
+        <span class="c"># If can&#39;t instanciate, try to register COM control again:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s">&quot;regsvr32 /s AutoItX3.dll&quot;</span><span class="p">)</span>
+       
+    <span class="c"># Import AutoIT (second try if necessary)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">autoit</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">autoit</span> <span class="o">=</span> <span class="n">win32com</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">Dispatch</span><span class="p">(</span><span class="s">&quot;AutoItX3.Control&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">pywintypes</span><span class="o">.</span><span class="n">com_error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s">&quot;Could not instanciate AutoIT COM module. Is AutoIT installed?&quot;</span><span class="p">)</span>
+       
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">autoit</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Could not instantiate AutoIT COM module.&quot;</span>
+        <span class="n">quit</span><span class="p">()</span>
+    
+    <span class="k">return</span> <span class="n">autoit</span>
+
+    </div>
+<div class="viewcode-block" id="toggle_fine_coarse_control"><a class="viewcode-back" href="../joystick_control.html#joystick_control.toggle_fine_coarse_control">[docs]</a><span class="k">def</span> <span class="nf">toggle_fine_coarse_control</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot; Toggle between fine and coarse control</span>
+<span class="sd">    (changes how the step size is calculated in calc_stepsize). &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">fine_control</span>
+    <span class="k">if</span> <span class="n">fine_control</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">fine_control</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">fine_control</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">print</span> <span class="s">&#39;changing control to fine (T/F):&#39;</span><span class="p">,</span> <span class="n">fine_control</span>
+
+</div>
+<div class="viewcode-block" id="toggle_motor_piezo_control"><a class="viewcode-back" href="../joystick_control.html#joystick_control.toggle_motor_piezo_control">[docs]</a><span class="k">def</span> <span class="nf">toggle_motor_piezo_control</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot; Toggle between controlling the motors or the piezos. &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">motors_or_piezos</span>
+    <span class="k">if</span> <span class="n">motors_or_piezos</span> <span class="o">==</span> <span class="n">piezos</span><span class="p">:</span>
+        <span class="n">motors_or_piezos</span> <span class="o">=</span> <span class="n">motors</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">motors_or_piezos</span> <span class="o">=</span> <span class="n">piezos</span>
+
+</div>
+<div class="viewcode-block" id="update_position"><a class="viewcode-back" href="../joystick_control.html#joystick_control.update_position">[docs]</a><span class="k">def</span> <span class="nf">update_position</span><span class="p">(</span> <span class="n">positioners</span><span class="p">,</span> <span class="n">xyz</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; The joystick has been moved, so update the appropriate motor or piezo</span>
+<span class="sd">    position accordingly and send notice of the event to the main pyPL thread.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">fine_control</span>
+    <span class="k">global</span> <span class="n">motors_or_piezos</span>
+    <span class="k">global</span> <span class="n">focusing</span>
+    
+    <span class="n">motorX</span> <span class="o">=</span> <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;motorX&#39;</span><span class="p">]</span>
+    <span class="n">motorY</span> <span class="o">=</span> <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;motorY&#39;</span><span class="p">]</span>
+    <span class="c">#motorZ = positioners[&#39;motorZ&#39;]</span>
+
+    <span class="n">piezoX</span> <span class="o">=</span> <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;piezoX&#39;</span><span class="p">]</span>
+    <span class="n">piezoY</span> <span class="o">=</span> <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;piezoY&#39;</span><span class="p">]</span>
+    <span class="n">piezoZ</span> <span class="o">=</span> <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;piezoZ&#39;</span><span class="p">]</span>
+           
+    <span class="n">stepsize</span> <span class="o">=</span> <span class="n">calc_stepsize</span><span class="p">(</span> <span class="n">xyz</span><span class="p">[</span><span class="s">&#39;Z&#39;</span><span class="p">],</span> <span class="n">motors_or_piezos</span><span class="p">,</span> <span class="n">fine_control</span> <span class="p">)</span>
+    <span class="n">net_joy_X</span> <span class="o">=</span> <span class="n">xyz</span><span class="p">[</span><span class="s">&#39;X&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">joystick_threshold</span> <span class="k">if</span> <span class="n">xyz</span><span class="p">[</span><span class="s">&#39;X&#39;</span><span class="p">]</span><span class="o">&gt;</span><span class="mi">0</span> <span class="k">else</span> <span class="n">xyz</span><span class="p">[</span><span class="s">&#39;X&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">joystick_threshold</span>
+    <span class="n">net_joy_Y</span> <span class="o">=</span> <span class="n">xyz</span><span class="p">[</span><span class="s">&#39;Y&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">joystick_threshold</span> <span class="k">if</span> <span class="n">xyz</span><span class="p">[</span><span class="s">&#39;Y&#39;</span><span class="p">]</span><span class="o">&gt;</span><span class="mi">0</span> <span class="k">else</span> <span class="n">xyz</span><span class="p">[</span><span class="s">&#39;Y&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">joystick_threshold</span>
+    
+    <span class="sd">&quot;&quot;&quot; Use the current position of the joystick to step the motors. stepsize is set by throttle.&quot;&quot;&quot;</span> 
+    <span class="k">if</span> <span class="n">motors_or_piezos</span> <span class="o">==</span> <span class="n">motors</span> <span class="ow">and</span> <span class="n">focusing</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">motorX</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">motorX</span><span class="p">[</span><span class="s">&#39;control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">MotorIsNotMoving</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">xyz</span><span class="p">[</span><span class="s">&#39;X&#39;</span><span class="p">])</span><span class="o">&gt;</span><span class="n">joystick_threshold</span><span class="p">:</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span> <span class="c"># this is an attempt to keep the motor from locking</span>
+            <span class="n">motorX</span><span class="p">[</span><span class="s">&#39;control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">StepUp</span><span class="p">(</span> <span class="n">polarity</span><span class="o">=</span><span class="n">motorX</span><span class="p">[</span><span class="s">&#39;direction&#39;</span><span class="p">],</span> <span class="n">stepsize</span><span class="o">=</span><span class="n">stepsize</span><span class="o">*</span><span class="n">net_joy_X</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="bp">False</span> <span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">motorY</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">motorY</span><span class="p">[</span><span class="s">&#39;control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">MotorIsNotMoving</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">xyz</span><span class="p">[</span><span class="s">&#39;Y&#39;</span><span class="p">])</span><span class="o">&gt;</span><span class="n">joystick_threshold</span><span class="p">:</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span> <span class="c"># this is an attempt to keep the motor from locking</span>
+            <span class="n">motorY</span><span class="p">[</span><span class="s">&#39;control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">StepUp</span><span class="p">(</span> <span class="n">polarity</span><span class="o">=</span><span class="n">motorY</span><span class="p">[</span><span class="s">&#39;direction&#39;</span><span class="p">],</span> <span class="n">stepsize</span><span class="o">=</span><span class="n">stepsize</span><span class="o">*</span><span class="n">net_joy_Y</span><span class="p">,</span> <span class="n">wait</span><span class="o">=</span><span class="bp">False</span> <span class="p">)</span>
+            <span class="c">#print motorY[&#39;control&#39;].GetStatusBits_Bits()</span>
+            
+        <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">sendMessage</span><span class="p">(</span><span class="s">&quot;joystick-moved&quot;</span><span class="p">,</span> <span class="s">&#39;motors&#39;</span><span class="p">)</span>
+            
+    <span class="k">elif</span> <span class="n">motors_or_piezos</span> <span class="o">==</span> <span class="n">piezos</span> <span class="ow">and</span> <span class="n">focusing</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">piezoX</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">xyz</span><span class="p">[</span><span class="s">&#39;X&#39;</span><span class="p">])</span><span class="o">&gt;</span><span class="n">joystick_threshold</span><span class="p">:</span>
+            <span class="n">piezoX</span><span class="p">[</span><span class="s">&#39;control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">StepUp</span><span class="p">(</span> <span class="n">direction</span><span class="o">=</span><span class="n">piezoX</span><span class="p">[</span><span class="s">&#39;direction&#39;</span><span class="p">],</span> <span class="n">stepsize</span><span class="o">=</span><span class="n">stepsize</span><span class="o">*</span><span class="n">net_joy_X</span> <span class="p">)</span>
+            
+        <span class="k">if</span> <span class="n">piezoY</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">xyz</span><span class="p">[</span><span class="s">&#39;Y&#39;</span><span class="p">])</span><span class="o">&gt;</span><span class="n">joystick_threshold</span><span class="p">:</span>
+            <span class="n">piezoY</span><span class="p">[</span><span class="s">&#39;control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">StepUp</span><span class="p">(</span> <span class="n">direction</span><span class="o">=</span><span class="n">piezoY</span><span class="p">[</span><span class="s">&#39;direction&#39;</span><span class="p">],</span> <span class="n">stepsize</span><span class="o">=</span><span class="n">stepsize</span><span class="o">*</span><span class="n">net_joy_Y</span> <span class="p">)</span>
+            
+        <span class="k">if</span> <span class="n">piezoX</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">piezoY</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">sendMessage</span><span class="p">(</span><span class="s">&quot;joystick-moved&quot;</span><span class="p">,</span> <span class="s">&#39;piezos&#39;</span><span class="p">)</span>
+            
+    <span class="k">elif</span> <span class="n">focusing</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">piezoZ</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">piezoZ</span><span class="p">[</span><span class="s">&#39;control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">StepUp</span><span class="p">(</span> <span class="n">direction</span><span class="o">=</span><span class="n">piezoZ</span><span class="p">[</span><span class="s">&#39;direction&#39;</span><span class="p">],</span> <span class="n">stepsize</span><span class="o">=</span><span class="n">stepsize</span><span class="o">*</span><span class="n">xyz</span><span class="p">[</span><span class="s">&#39;Y&#39;</span><span class="p">]</span> <span class="p">)</span>
+            <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">sendMessage</span><span class="p">(</span><span class="s">&quot;joystick-moved&quot;</span><span class="p">,</span> <span class="s">&#39;piezos&#39;</span><span class="p">)</span>
+            
+        
+        </div>
+<div class="viewcode-block" id="handle_joystick_button_down"><a class="viewcode-back" href="../joystick_control.html#joystick_control.handle_joystick_button_down">[docs]</a><span class="k">def</span> <span class="nf">handle_joystick_button_down</span><span class="p">(</span> <span class="n">event</span><span class="p">,</span> <span class="n">positioners</span><span class="p">,</span> <span class="n">wobbler</span><span class="p">,</span> <span class="n">autoit</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Deals with a joystick button press. &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">fine_control</span>
+    <span class="k">global</span> <span class="n">motors_or_piezos</span>
+
+    <span class="k">if</span> <span class="p">(</span> <span class="n">event</span><span class="o">.</span><span class="n">dict</span><span class="p">[</span><span class="s">&#39;button&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">toggle_motors_piezos_button</span> <span class="p">):</span>
+        <span class="n">toggle_motor_piezo_control</span><span class="p">()</span>
+        <span class="c">#print &quot;Toggle piezo/motor control. Now controlling %s.&quot; % ( motors_or_piezos )</span>
+
+    <span class="k">if</span> <span class="p">(</span> <span class="n">event</span><span class="o">.</span><span class="n">dict</span><span class="p">[</span><span class="s">&#39;button&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">center_piezos_button</span> <span class="p">):</span>
+        <span class="c">#print &quot;Centering X and Y piezos to middle of their range.&quot;</span>
+        <span class="n">center_piezos</span><span class="p">(</span> <span class="n">positioners</span> <span class="p">)</span>
+        <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">sendMessage</span><span class="p">(</span><span class="s">&quot;joystick-moved&quot;</span><span class="p">,</span> <span class="s">&#39;piezos&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span> <span class="n">event</span><span class="o">.</span><span class="n">dict</span><span class="p">[</span><span class="s">&#39;button&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">focusing_button</span> <span class="p">):</span>
+        <span class="c">#print &quot;focusing...&quot;</span>
+        <span class="k">global</span> <span class="n">focusing</span>
+<span class="c">#        focusing = True</span>
+        <span class="k">pass</span>
+        
+    <span class="k">if</span> <span class="p">(</span> <span class="n">event</span><span class="o">.</span><span class="n">dict</span><span class="p">[</span><span class="s">&#39;button&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">stop_button</span> <span class="p">):</span>
+        <span class="c">#print &quot;Stop motors immediately!&quot;</span>
+
+        <span class="k">if</span> <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;motorX&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;motorX&#39;</span><span class="p">][</span><span class="s">&#39;control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">StopImmediate</span><span class="p">()</span>
+            
+        <span class="k">if</span> <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;motorY&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;motorY&#39;</span><span class="p">][</span><span class="s">&#39;control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">StopImmediate</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;motorZ&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;motorZ&#39;</span><span class="p">][</span><span class="s">&#39;control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">StopImmediate</span><span class="p">()</span>
+        
+        <span class="c"># and set this control to motors:</span>
+        <span class="n">motors_or_piezos</span> <span class="o">=</span> <span class="n">motors</span>
+
+    <span class="k">if</span> <span class="p">(</span> <span class="n">event</span><span class="o">.</span><span class="n">dict</span><span class="p">[</span><span class="s">&#39;button&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">piezos_button</span> <span class="p">):</span>
+        <span class="c"># set to control piezos</span>
+        <span class="n">motors_or_piezos</span> <span class="o">=</span> <span class="n">piezos</span>
+
+    <span class="k">if</span> <span class="p">(</span> <span class="n">event</span><span class="o">.</span><span class="n">dict</span><span class="p">[</span><span class="s">&#39;button&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">WinSpecFocus_button</span> <span class="p">):</span>
+        <span class="c"># in default mode, this will match the window title from start (similar to WinSpec*)</span>
+        <span class="c"># see AutoIt Help program for more info</span>
+        <span class="n">autoit</span><span class="o">.</span><span class="n">WinActivate</span><span class="p">(</span><span class="s">&quot;WinSpec&quot;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="p">(</span> <span class="n">event</span><span class="o">.</span><span class="n">dict</span><span class="p">[</span><span class="s">&#39;button&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">CameraFocus_button</span> <span class="p">):</span>
+        <span class="n">autoit</span><span class="o">.</span><span class="n">WinActivate</span><span class="p">(</span><span class="s">&quot;uc480&quot;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="p">(</span> <span class="n">event</span><span class="o">.</span><span class="n">dict</span><span class="p">[</span><span class="s">&#39;button&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">toggle_wobble_button</span> <span class="p">):</span>
+        <span class="n">wobbler</span><span class="o">.</span><span class="n">wobbleToggle</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="p">(</span> <span class="n">event</span><span class="o">.</span><span class="n">dict</span><span class="p">[</span><span class="s">&#39;button&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">toggle_coarse_fine_button</span> <span class="p">):</span>
+        <span class="n">toggle_fine_coarse_control</span><span class="p">()</span>
+        
+</div>
+<div class="viewcode-block" id="handle_joystick_button_up"><a class="viewcode-back" href="../joystick_control.html#joystick_control.handle_joystick_button_up">[docs]</a><span class="k">def</span> <span class="nf">handle_joystick_button_up</span><span class="p">(</span> <span class="n">event</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Deals with release of a joystick button (although there may not be anything</span>
+<span class="sd">    meaningful that happens as a result of this. &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="p">(</span> <span class="n">event</span><span class="o">.</span><span class="n">dict</span><span class="p">[</span><span class="s">&#39;button&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">focusing_button</span> <span class="p">):</span>
+        <span class="c">#print &quot;focusing done.&quot;</span>
+        <span class="k">global</span> <span class="n">focusing</span>
+        <span class="n">focusing</span> <span class="o">=</span> <span class="bp">False</span>
+
+
+<span class="c"># wait for joystick input</span></div>
+<div class="viewcode-block" id="monitor_joystick"><a class="viewcode-back" href="../joystick_control.html#joystick_control.monitor_joystick">[docs]</a><span class="k">def</span> <span class="nf">monitor_joystick</span><span class="p">(</span> <span class="n">app</span><span class="p">,</span> <span class="n">positioners</span><span class="p">,</span> <span class="n">joysticks</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Monitor the joystick for changes in position or button presses. &quot;&quot;&quot;</span>
+    <span class="c"># initialize autoit to enable toggling between WinSpec and camera windows:</span>
+    <span class="n">autoit</span> <span class="o">=</span> <span class="n">init_autoit</span><span class="p">()</span>
+    <span class="n">prev_position</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span> <span class="n">X</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">Y</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">Z</span><span class="o">=</span><span class="mf">0.0</span> <span class="p">)</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">pygame</span><span class="o">.</span><span class="n">event</span><span class="o">.</span><span class="n">peek</span><span class="p">([</span><span class="n">pygame</span><span class="o">.</span><span class="n">JOYAXISMOTION</span><span class="p">,</span><span class="n">pygame</span><span class="o">.</span><span class="n">JOYBUTTONDOWN</span><span class="p">,</span><span class="n">pygame</span><span class="o">.</span><span class="n">JOYBUTTONUP</span><span class="p">]):</span>
+            <span class="n">events</span> <span class="o">=</span> <span class="n">pygame</span><span class="o">.</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">pygame</span><span class="o">.</span><span class="n">JOYBUTTONDOWN</span><span class="p">:</span>
+                    <span class="n">handle_joystick_button_down</span><span class="p">(</span> <span class="n">event</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">positioners</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">wobbler</span><span class="p">,</span> <span class="n">autoit</span> <span class="p">)</span>
+                <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">pygame</span><span class="o">.</span><span class="n">JOYBUTTONUP</span><span class="p">:</span>
+                    <span class="n">handle_joystick_button_up</span><span class="p">(</span> <span class="n">event</span> <span class="p">)</span>
+        
+        
+        <span class="n">num_active_sticks</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">stick</span> <span class="ow">in</span> <span class="n">joysticks</span><span class="p">:</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="n">get_joystick_position</span><span class="p">(</span> <span class="n">stick</span> <span class="p">)</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span> <span class="n">pos</span><span class="p">[</span><span class="s">&#39;X&#39;</span><span class="p">]</span> <span class="p">)</span> <span class="o">&gt;</span> <span class="n">joystick_threshold</span> <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span> <span class="n">pos</span><span class="p">[</span><span class="s">&#39;Y&#39;</span><span class="p">]</span> <span class="p">)</span><span class="o">&gt;</span><span class="n">joystick_threshold</span><span class="p">:</span>
+                <span class="n">position</span> <span class="o">=</span> <span class="n">pos</span>
+                <span class="n">num_active_sticks</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+        <span class="k">if</span> <span class="n">num_active_sticks</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">num_active_sticks</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c"># trying to use more than one joystick at once is confusing, so</span>
+            <span class="c"># we&#39;ll just not move anything until you can make up your mind and use only one.</span>
+            <span class="n">position</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span> <span class="n">X</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">Y</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">Z</span><span class="o">=</span><span class="mf">0.0</span> <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">position</span><span class="p">[</span><span class="s">&#39;X&#39;</span><span class="p">])</span><span class="o">&gt;</span><span class="n">joystick_threshold</span> <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">position</span><span class="p">[</span><span class="s">&#39;Y&#39;</span><span class="p">])</span><span class="o">&gt;</span><span class="n">joystick_threshold</span><span class="p">:</span>
+            <span class="n">update_position</span><span class="p">(</span> <span class="n">positioners</span><span class="p">,</span> <span class="n">position</span> <span class="p">)</span>
+            <span class="c">#print positioners[&#39;motorY&#39;][&#39;control&#39;].GetStatusBits_Bits()</span>
+            
+        <span class="k">elif</span> <span class="nb">abs</span><span class="p">(</span><span class="n">prev_position</span><span class="p">[</span><span class="s">&#39;X&#39;</span><span class="p">])</span><span class="o">&gt;</span> <span class="n">joystick_threshold</span> <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">prev_position</span><span class="p">[</span><span class="s">&#39;Y&#39;</span><span class="p">])</span><span class="o">&gt;</span><span class="n">joystick_threshold</span><span class="p">:</span>
+            <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">sendMessage</span><span class="p">(</span><span class="s">&quot;joystick-moved&quot;</span><span class="p">,</span> <span class="s">&#39;motors&#39;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">prev_position</span><span class="p">[</span><span class="s">&#39;X&#39;</span><span class="p">])</span><span class="o">&gt;</span> <span class="n">joystick_threshold</span> <span class="ow">and</span> <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;motorX&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;motorX&#39;</span><span class="p">][</span><span class="s">&#39;control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">StopImmediate</span><span class="p">()</span>
+                <span class="c">#print positioners[&#39;motorX&#39;][&#39;control&#39;].GetStatusBits_Bits()</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">prev_position</span><span class="p">[</span><span class="s">&#39;Y&#39;</span><span class="p">])</span><span class="o">&gt;</span> <span class="n">joystick_threshold</span> <span class="ow">and</span> <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;motorY&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">positioners</span><span class="p">[</span><span class="s">&#39;motorY&#39;</span><span class="p">][</span><span class="s">&#39;control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">StopImmediate</span><span class="p">()</span>
+        
+        <span class="n">prev_position</span> <span class="o">=</span> <span class="n">position</span>
+        
+<span class="c">#            if( events.type == pygame.JOYAXISMOTION or events.type == pygame.JOYBUTTONDOWN ):</span>
+<span class="c">#                handleJoyEvent( event, positioners, joysticks )</span>
+        <span class="k">if</span> <span class="n">app</span><span class="o">.</span><span class="n">wobbler</span><span class="o">.</span><span class="n">isWobbling</span><span class="p">():</span>
+            <span class="n">app</span><span class="o">.</span><span class="n">wobbler</span><span class="o">.</span><span class="n">wobbleIncrement</span><span class="p">()</span>        
+
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span> <span class="mf">0.03</span> <span class="p">)</span>
+
+
+        </div>
+<div class="viewcode-block" id="StartControl"><a class="viewcode-back" href="../joystick_control.html#joystick_control.StartControl">[docs]</a><span class="k">def</span> <span class="nf">StartControl</span><span class="p">(</span> <span class="n">app</span><span class="p">,</span> <span class="n">positioners</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Initialize pygame and start the monitor_joystick event loop. &quot;&quot;&quot;</span>
+    
+    <span class="n">pygame</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
+
+    <span class="n">pygame</span><span class="o">.</span><span class="n">joystick</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
+    <span class="k">if</span> <span class="bp">True</span><span class="p">:</span> <span class="c"># needed to work on lab/XP computer, haven&#39;t tested on Vista yet.</span>
+        <span class="kn">import</span> <span class="nn">os</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s">&#39;SDL_VIDEODRIVER&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;windib&#39;</span>
+    <span class="n">pygame</span><span class="o">.</span><span class="n">display</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pygame</span><span class="o">.</span><span class="n">joystick</span><span class="o">.</span><span class="n">get_count</span><span class="p">():</span>
+        <span class="k">print</span> <span class="s">&quot;Did not detect a joystick. Attach joystick and restart program for joystick control.&quot;</span>
+        <span class="n">quit</span><span class="p">()</span>
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="si">%d</span><span class="s"> joystick(s) detected.&quot;</span> <span class="o">%</span> <span class="n">pygame</span><span class="o">.</span><span class="n">joystick</span><span class="o">.</span><span class="n">get_count</span><span class="p">()</span>
+
+    <span class="c"># allow multiple joysticks</span>
+    <span class="n">joysticks</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">pygame</span><span class="o">.</span><span class="n">joystick</span><span class="o">.</span><span class="n">get_count</span><span class="p">()):</span>
+        <span class="n">myjoy</span> <span class="o">=</span> <span class="n">pygame</span><span class="o">.</span><span class="n">joystick</span><span class="o">.</span><span class="n">Joystick</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="n">myjoy</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
+        <span class="n">joysticks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">myjoy</span><span class="p">)</span>
+        <span class="c">#print &quot;Joystick %d: &quot; % (i) + joy[i].get_name()</span>
+    <span class="c">#print &quot;Press button 11 to quit.\n&quot;</span>
+    <span class="k">print</span> <span class="s">&quot;Joystick controls </span><span class="si">%s</span><span class="s"> by default.</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">motors_or_piezos</span>
+
+    <span class="c"># run joystick listener loop</span>
+    <span class="n">monitor_joystick</span><span class="p">(</span> <span class="n">app</span><span class="p">,</span> <span class="n">positioners</span><span class="p">,</span> <span class="n">joysticks</span> <span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">pyPL 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Kasey J. Russell.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -93,6 +93,7 @@ class WorkerThread(Thread):
         self.TimeStepInSec = parent.TimeStepInSec
 
     def run(self):
+        """ Start thread. """
         w32c.pythoncom.CoInitialize()
         WinspecDoc = w32c.Dispatch("WinX32.DocFile")
         WinspecExpt = w32c.Dispatch("WinX32.ExpSetup")
@@ -226,10 +227,12 @@ class MainPanel( wx.Panel ):
         
         
     def On_combo_stepsize_Changed( self, event ):
+        """ Event Handler. """
         self.TimeStepInSec = float( self.combo_stepsize.GetValue() )
         #print 'stepsize changed:', self.TimeStepInSec
     
     def On_SetFname_Changed( self, event ):
+        """ Event Handler. """
         self.FnameBase = self.text_fname.GetValue()
         self.text_exampleFname.SetLabel( "(e.g. " + self.FnameBase + "_XXXs.SPE)" )
         #print 'filename base:', self.FnameBase
@@ -256,6 +259,7 @@ class MainPanel( wx.Panel ):
             self.worker.abort()
         
     def On_button_Directory_Clicked( self, event ):
+        """ Event Handler. """
         dlg = wx.DirDialog(self, "To enable plotting, select directory where WinSpec is saving the SPE files:",
                           style=wx.DD_DEFAULT_STYLE,
                           defaultPath=self.DataPath
@@ -281,6 +285,7 @@ class MainPanel( wx.Panel ):
         dlg.Destroy()
 
     def OnThreadUpdate( self, event ):
+        """ Event Handler. """
         self.status.SetLabel( 'Done with acquisition #%s' % (event.data) )
         if len( pylab.get_fignums() ) > 0 and pylab.get_fignums()[-1] == self.current_fignum:
             if self.plotcolormap():
@@ -300,9 +305,11 @@ class MainPanel( wx.Panel ):
         self.worker = None
 
     def SetFname(self):
+        """ Set filename to save to. """
         self.Fname = self.FnameBase + "_" + str(self.time_of_scan) + "s"
         
     def plotcolormap(self):
+        """ update colormap """
         files = glob.glob( self.DataPath + "\\" + self.FnameBase + '*.SPE' ) # get a list of all non-glued txt files
         
         # assume filename is of the format: timeseriesvacuum_2640s.SPE

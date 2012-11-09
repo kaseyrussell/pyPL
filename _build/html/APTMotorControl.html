@@ -1,0 +1,302 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>APT Motor Control &mdash; pyPL 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="pyPL 1.0 documentation" href="index.html" />
+    <link rel="next" title="APT Piezo Control" href="APTPiezoControl.html" />
+    <link rel="prev" title="APT System Control" href="APTSystemControl.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="APTPiezoControl.html" title="APT Piezo Control"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="APTSystemControl.html" title="APT System Control"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">pyPL 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-APTMotorControl">
+<span id="apt-motor-control"></span><span id="aptmotorcontrol"></span><h1>APT Motor Control<a class="headerlink" href="#module-APTMotorControl" title="Permalink to this headline">¶</a></h1>
+<p>In an ideal world, this will be a complete working library
+for the APTMotor</p>
+<dl class="class">
+<dt id="APTMotorControl.APTMotor">
+<em class="property">class </em><tt class="descclassname">APTMotorControl.</tt><tt class="descname">APTMotor</tt><big>(</big><em>parent</em>, <em>HWSerialNum</em>, <em>id=-1</em>, <em>pos=wx.Point(-1</em>, <em>-1)</em>, <em>size=wx.Size(-1</em>, <em>-1)</em>, <em>style=0</em>, <em>name='Stepper Motor'</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor" title="Permalink to this definition">¶</a></dt>
+<dd><p>The Motor class derives from wx.lib.activex.ActiveXCtrl, which
+is where all the heavy lifting with COM gets done.</p>
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.GetStageAxisInfo">
+<tt class="descname">GetStageAxisInfo</tt><big>(</big><em>channel=0</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.GetStageAxisInfo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.GetStageAxisInfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a tuple of:
+min position, max position, units, pitch, and direction</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.GetStageAxisInfo_MaxPos">
+<tt class="descname">GetStageAxisInfo_MaxPos</tt><big>(</big><em>channel=0</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.GetStageAxisInfo_MaxPos"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.GetStageAxisInfo_MaxPos" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the maximum position of the stage that is accessible using
+the MoveAbsoluteEx or MoveRelativeEx commands, although you
+may be able to exceed it by Jogging. I think this is a
+user-settable quantity. For the small stepper we have,
+the max travel is like 18mm. (Or should be ~25mm?)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.GetStageAxisInfo_MinPos">
+<tt class="descname">GetStageAxisInfo_MinPos</tt><big>(</big><em>channel=0</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.GetStageAxisInfo_MinPos"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.GetStageAxisInfo_MinPos" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the minimum position of the stage that is accessible using
+the MoveAbsoluteEx or MoveRelativeEx commands, although you
+may be able to exceed it by Jogging. I think this is a
+user-settable quantity. For the small stepper we have, if
+it&#8217;s been &#8220;homed&#8221; then it sets 0 to be the minimum position.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.GetStatusBits_Bits">
+<tt class="descname">GetStatusBits_Bits</tt><big>(</big><em>channel=0</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.GetStatusBits_Bits"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.GetStatusBits_Bits" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the status bits.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.MotorIsNotMoving">
+<tt class="descname">MotorIsNotMoving</tt><big>(</big><em>channel=0</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.MotorIsNotMoving"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.MotorIsNotMoving" title="Permalink to this definition">¶</a></dt>
+<dd><p>checks if the status bits of the motor indicate that the motor is stopped</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.MoveAbsoluteEx">
+<tt class="descname">MoveAbsoluteEx</tt><big>(</big><em>position_ch1=0.0</em>, <em>position_ch2=0.0</em>, <em>channel=0</em>, <em>wait=True</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.MoveAbsoluteEx"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.MoveAbsoluteEx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move motor to a specified position.</p>
+<dl class="docutils">
+<dt><em>position_ch1</em></dt>
+<dd>target position (in mm) of channel 1 (the default channel)</dd>
+<dt><em>position_ch2</em></dt>
+<dd>target position (in mm) of channel 2. I&#8217;m not sure what it
+means to have different channels...</dd>
+<dt><em>channel</em></dt>
+<dd>the channel you want to move. I always use default (channel1).</dd>
+<dt><em>wait</em></dt>
+<dd>Wait for the motor to finish moving? Default is True.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.MoveRelativeEx">
+<tt class="descname">MoveRelativeEx</tt><big>(</big><em>relative_dist_ch1=0.0</em>, <em>relative_dist_ch2=0.0</em>, <em>channel=0</em>, <em>wait=True</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.MoveRelativeEx"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.MoveRelativeEx" title="Permalink to this definition">¶</a></dt>
+<dd><p>I&#8217;ve never tried this function...</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.SetBLashDist">
+<tt class="descname">SetBLashDist</tt><big>(</big><em>channel=0</em>, <em>backlash=0.01</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.SetBLashDist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.SetBLashDist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the backlash distance in mm.</p>
+<dl class="docutils">
+<dt><em>channel</em></dt>
+<dd>channel1 by default</dd>
+<dt><em>backlash</em></dt>
+<dd>distance in mm, 0.01 by default</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.SetHomeParams">
+<tt class="descname">SetHomeParams</tt><big>(</big><em>channel=0</em>, <em>direction=2</em>, <em>switch=1</em>, <em>velocity=1.0</em>, <em>zero_offset=0.1</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.SetHomeParams"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.SetHomeParams" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the &#8220;home params&#8221;. I forget what these actually mean.</p>
+<dl class="docutils">
+<dt><em>channel</em></dt>
+<dd>channel1 by default</dd>
+<dt><em>direction</em></dt>
+<dd>home_rev by default</dd>
+<dt><em>switch</em></dt>
+<dd>homelimsw_rev by default</dd>
+<dt><em>velocity</em></dt>
+<dd>1.0 by default</dd>
+<dt><em>zero_offset</em></dt>
+<dd>0.1 by default.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.SetSWPosLimits">
+<tt class="descname">SetSWPosLimits</tt><big>(</big><em>channel=0</em>, <em>minpos=0.0</em>, <em>maxpos=12.0</em>, <em>limitmode=3</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.SetSWPosLimits"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.SetSWPosLimits" title="Permalink to this definition">¶</a></dt>
+<dd><p>I don&#8217;t quite understand what this does.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.SetStageAxisInfo">
+<tt class="descname">SetStageAxisInfo</tt><big>(</big><em>channel=0</em>, <em>minpos=0.0</em>, <em>maxpos=12.0</em>, <em>pitch=1.0</em>, <em>units=1</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.SetStageAxisInfo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.SetStageAxisInfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the stage axis info.</p>
+<dl class="docutils">
+<dt><em>channel</em></dt>
+<dd>channel1 by default</dd>
+<dt><em>minpos</em></dt>
+<dd>0.0 (mm) by default</dd>
+<dt><em>maxpos</em></dt>
+<dd>12.0 (mm) by default</dd>
+<dt><em>pitch</em></dt>
+<dd>1.0 by default</dd>
+<dt><em>units</em></dt>
+<dd>units_mm by default</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.SetStepSize">
+<tt class="descname">SetStepSize</tt><big>(</big><em>stepsize</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.SetStepSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.SetStepSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the step size for the StepUp and StepDown methods.</p>
+<dl class="docutils">
+<dt><em>stepsize</em></dt>
+<dd>step size in mm.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.SetVelParams">
+<tt class="descname">SetVelParams</tt><big>(</big><em>channel=0</em>, <em>minvelocity=0.0</em>, <em>maxvelocity=2.0</em>, <em>acceleration=4.0</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.SetVelParams"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.SetVelParams" title="Permalink to this definition">¶</a></dt>
+<dd><p>what is minvelocity? doesn&#8217;t seem to be in the panel control options...</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.StepDown">
+<tt class="descname">StepDown</tt><big>(</big><em>channel=0</em>, <em>wait=True</em>, <em>polarity=1.0</em>, <em>stepsize='default'</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.StepDown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.StepDown" title="Permalink to this definition">¶</a></dt>
+<dd><p>I didn&#8217;t call this Jog because I couldn&#8217;t get the SetJogStepSize method to work.
+This is a hack that sets the position absolutely using a global step variable.</p>
+<dl class="docutils">
+<dt><em>channel</em></dt>
+<dd>channel1 by default.</dd>
+<dt><em>wait</em></dt>
+<dd>wait for motor to finish moving? True by default.</dd>
+<dt><em>polarity</em></dt>
+<dd>&#8220;Down&#8221; is a relative term, but the motor position is absolute, so this
+parameter can be used to invert what you mean by &#8220;down&#8221;.</dd>
+<dt><em>stepsize</em></dt>
+<dd>By default, use the value set by the SetStepSize method.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.StepUp">
+<tt class="descname">StepUp</tt><big>(</big><em>channel=0</em>, <em>wait=True</em>, <em>polarity=1.0</em>, <em>stepsize='default'</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.StepUp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.StepUp" title="Permalink to this definition">¶</a></dt>
+<dd><p>I didn&#8217;t call this Jog because I couldn&#8217;t get the SetJogStepSize method to work.
+This is a hack that sets the position absolutely using a global step variable.</p>
+<dl class="docutils">
+<dt><em>channel</em></dt>
+<dd>channel1 by default.</dd>
+<dt><em>wait</em></dt>
+<dd>wait for motor to finish moving? True by default.</dd>
+<dt><em>polarity</em></dt>
+<dd>&#8220;Up&#8221; is a relative term, but the motor position is absolute, so this
+parameter can be used to invert what you mean by &#8220;up&#8221;.</dd>
+<dt><em>stepsize</em></dt>
+<dd>By default, use the value set by the SetStepSize method.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="APTMotorControl.APTMotor.StopImmediate">
+<tt class="descname">StopImmediate</tt><big>(</big><em>channel=0</em><big>)</big><a class="reference internal" href="_modules/APTMotorControl.html#APTMotor.StopImmediate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#APTMotorControl.APTMotor.StopImmediate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stops the motor from moving (although this won&#8217;t overcome the strange ActiveX
+phantom-motor-moving issue where the control says it is moving but actually isn&#8217;t.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="APTSystemControl.html"
+                        title="previous chapter">APT System Control</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="APTPiezoControl.html"
+                        title="next chapter">APT Piezo Control</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/APTMotorControl.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="APTPiezoControl.html" title="APT Piezo Control"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="APTSystemControl.html" title="APT System Control"
+             >previous</a> |</li>
+        <li><a href="index.html">pyPL 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Kasey J. Russell.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

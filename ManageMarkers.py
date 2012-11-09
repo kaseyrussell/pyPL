@@ -11,6 +11,7 @@ class MainApp( wx.App ):
         self.mainframe = MainFrame()
         
 class MainFrame( wx.Frame ):
+    """Main marker-manager window. """
     def __init__( self, parent=None, id=wx.ID_ANY, title='Manage Markers', size=wx.Size(350, 80) ):
         wx.Frame.__init__( self, parent=parent, id=id, title=title, size=size )
         
@@ -48,6 +49,7 @@ class MainFrame( wx.Frame ):
 
 
     def on_button_clicked_delete_markers( self, event ):
+        """ Handler. """
         if self.MarkerListDropdown.Value == 'all markers':
             dlg = wx.MessageDialog( self, 'Are you sure you want to delete all markers?', 
                 "Delete Markers", wx.YES_NO | wx.ICON_QUESTION )

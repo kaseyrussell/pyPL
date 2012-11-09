@@ -23,13 +23,15 @@ ID_PositionLog_Erase = wx.NewId()
 ID_PositionLog_Save = wx.NewId()
 ID_PositionLog_Load = wx.NewId()
 
-class MainApp( wx.App ): 
+class MainApp( wx.App ):
+    """ ... """
     def __init__( self, redirect=False, filename=None ):
         wx.App.__init__( self, redirect, filename )
         
         self.mainframe = MainFrame()
         
 class MainFrame( wx.Frame ):
+    """ position log window. """
     def __init__( self, parent=None, id=wx.ID_ANY, title='Position Logger',
                  size=wx.Size(500,500) ):
         wx.Frame.__init__( self, None, id=id, title=title, size=size )
@@ -125,6 +127,7 @@ class MainFrame( wx.Frame ):
 
 
     def add_menu_bar(self):
+        """ add menu bar to window. """
         menuBar = wx.MenuBar()
 
         """ Stuff menu
@@ -151,6 +154,7 @@ class MainFrame( wx.Frame ):
 
     
     def on_button_clicked_add_marker( self, event ):
+        """ Handler. """
         markername = self.text_marker.GetValue()
 
         if len( self.x_log ) == 0:
@@ -164,6 +168,7 @@ class MainFrame( wx.Frame ):
 
 
     def on_button_clicked_autoscale_range( self, event ):
+        """ Handler. """
         if self.PositionLogAutoRange == False:
             self.PositionLogAutoRange = True
             self.update_plot()
@@ -174,6 +179,7 @@ class MainFrame( wx.Frame ):
         
 
     def on_button_clicked_move_to_click( self, event ):
+        """ Handler. """
         if self.moveto == False:
             self.moveto = True
             if self.cid is not None:
@@ -189,6 +195,7 @@ class MainFrame( wx.Frame ):
 
     
     def on_button_clicked_move_to_marker( self, event ):
+        """ Handler. """
         target = self.MarkerListDropdown.GetValue()
         for marker in self.markers:
             if marker['label'] == target:
@@ -203,6 +210,7 @@ class MainFrame( wx.Frame ):
 
         
     def on_button_clicked_reset_range( self, event ):
+        """ Handler. """
         self.axes.set_xlim( self.PositionLogMaxPlotRange_X )
         self.axes.set_ylim( self.PositionLogMaxPlotRange_Y )
         self.fig.canvas.draw()
@@ -212,10 +220,12 @@ class MainFrame( wx.Frame ):
             
 
     def on_close_mainframe( self, event ):
+        """ Handler. """
         self.Destroy()
         
  
     def on_mouse_clicked( self, event ):
+        """ Handler. """
         if not event.inaxes:
             return
         
@@ -234,6 +244,7 @@ class MainFrame( wx.Frame ):
 
 
     def on_stuff_menu_manage_markers( self, event ):
+        """ Handler. """
         try: 
             if not self.managemarkers.Show( True ):
                 self.managemarkers.Raise()
@@ -242,6 +253,7 @@ class MainFrame( wx.Frame ):
         
 
     def on_stuff_menu_erase_marker_log( self, event ):
+        """ Handler. """
         dlg = wx.MessageDialog( self, 'Are you sure you want to delete all markers?', 
             "Delete Markers", wx.YES_NO | wx.ICON_QUESTION )
         if dlg.ShowModal() == wx.ID_YES:
@@ -260,6 +272,7 @@ class MainFrame( wx.Frame ):
 
 
     def on_stuff_menu_erase_position_log( self, event ):
+        """ Handler. """
         dlg = wx.MessageDialog( self, 'Are you sure you want to delete the position log?', 
             "Delete Position Log", wx.YES_NO | wx.ICON_QUESTION )
         if dlg.ShowModal() == wx.ID_YES:
@@ -273,6 +286,7 @@ class MainFrame( wx.Frame ):
 
 
     def on_stuff_menu_save_position_log( self, event ):
+        """ Handler. """
         dlg = wx.FileDialog( self, ("Save position log to a *.pkl file " +
                                 "(extension will be automatically appended)"),
                     style=wx.SAVE|wx.FD_OVERWRITE_PROMPT )
@@ -296,6 +310,7 @@ class MainFrame( wx.Frame ):
 
 
     def on_stuff_menu_load_position_log( self, event ):
+        """ Handler. """
         dlg = wx.FileDialog( self, ("Load a position log file " +
                                 "(this will overwrite the current position log)"),
                     style=wx.OPEN )
@@ -323,6 +338,7 @@ class MainFrame( wx.Frame ):
 
 
     def update_plot( self ):
+        """ Updates the position log plot. """
         xlim = self.axes.get_xlim()
         ylim = self.axes.get_ylim()
 

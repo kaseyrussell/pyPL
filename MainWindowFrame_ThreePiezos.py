@@ -12,6 +12,7 @@ class FakeEvent:
         self.data = string
 
 class MainPanel( wx.Panel ):
+    """ The window with sliders for controlling the piezos. """
     def __init__( self, parent, positioners, id=wx.ID_ANY ):
         wx.Panel.__init__( self, parent, id, style=wx.WANTS_CHARS )
         self.piezoX = positioners['piezoX']
@@ -237,6 +238,9 @@ class MainPanel( wx.Panel ):
         Publisher().subscribe( self.On_piezos_moved, "piezos-moved" )
 
     def On_piezos_moved( self, msg ):
+        """
+        Handler for updating the GUI in response to changes in piezo position.
+        """
         if msg.data == 'raster':
             self.On_button_XrangeLg_Clicked( None )
             Xloc = self.piezoX['control'].PositionCh1
@@ -258,7 +262,7 @@ class MainPanel( wx.Panel ):
 
     def On_joystick_moved( self, msg ):
         """
-        receives data from the thread controlling the joystick and updates our sliders accordingly
+        Receives data from the thread controlling the joystick and updates our sliders accordingly
         """
         if msg.data == 'piezos':
             self.On_button_YrangeLg_Clicked( None )
@@ -277,6 +281,9 @@ class MainPanel( wx.Panel ):
             self.Zlocation.SetValue( "%.3f" % Zloc )
             
     def On_keyboard_jog( self, event ):
+        """
+        Handler for updating the piezo position in respose to keyboard press.
+        """
         event.Skip()
         code = event.GetKeyCode()
         if ((code == wx.WXK_LEFT and self.piezoX['direction']==1) or
@@ -323,6 +330,9 @@ class MainPanel( wx.Panel ):
         
             
     def On_text_Zlocation_Changed( self, event ):
+        """
+        Handler for updating the z-piezo position in response to text entry.
+        """
         Zloc = float(self.Zlocation.GetValue())*1000
         if Zloc > self.Zslider.GetMax() or Zloc < self.Zslider.GetMin():
             # jump to full-scale
@@ -345,6 +355,9 @@ class MainPanel( wx.Panel ):
     
     
     def On_txtctrl_jogsize_Changed( self, event ):
+        """
+        Handler for updating the keyboard step size in response to text entry.
+        """
         event.Skip()
         try:
             jogsize = int(self.txtctrl_jogsize.GetValue())
@@ -355,6 +368,9 @@ class MainPanel( wx.Panel ):
         
         
     def On_button_ZrangeSmall_Clicked( self, event ):
+        """
+        Handler for rescaling z-piezo slider range.
+        """
         Zloc = self.Zslider.Value
         if Zloc > self.SmRange/2 and Zloc < self.PiezoMax-self.SmRange/2:
             self.Zslider.SetMin( Zloc-self.SmRange/2 )
@@ -373,6 +389,9 @@ class MainPanel( wx.Panel ):
         #print 'Z range small'
         
     def On_button_ZrangeMed_Clicked( self, event ):
+        """
+        Handler for rescaling z-piezo slider range.
+        """
         Zloc = self.Zslider.Value
         if Zloc > self.MedRange/2 and Zloc < self.PiezoMax-self.MedRange/2:
             self.Zslider.SetMin( Zloc-self.MedRange/2 )
@@ -391,6 +410,9 @@ class MainPanel( wx.Panel ):
         #print 'Z range medium'
         
     def On_button_ZrangeLg_Clicked( self, event ):
+        """
+        Handler for rescaling z-piezo slider range.
+        """
         Zloc = self.Zslider.Value
         self.Zslider.SetMin( self.PiezoMin )
         self.ZsliderMin.SetLabel( str(self.PiezoMin/1000.0) )
@@ -401,11 +423,17 @@ class MainPanel( wx.Panel ):
         #print 'Y range large'
         
     def On_Zslider_Changed( self, event ):
+        """
+        Handler for responding to slider input.
+        """
         Zloc = self.Zslider.Value/1000.0
         self.Zlocation.SetValue( str(Zloc) )
         self.piezoZ['control'].SetPosition( position=Zloc )
         
     def On_text_Ylocation_Changed( self, event ):
+        """
+        Handler for updating the y-piezo position in response to text entry.
+        """
         Yloc = float(self.Ylocation.GetValue())*1000
         if Yloc > self.Yslider.GetMax() or Yloc < self.Yslider.GetMin():
             # jump to full-scale
@@ -427,6 +455,9 @@ class MainPanel( wx.Panel ):
             self.piezoY['control'].SetPositionSmooth( position=Yloc/1000.0, step=0.25 )
     
     def On_button_YrangeSmall_Clicked( self, event ):
+        """
+        Handler for rescaling y-piezo slider range.
+        """
         Yloc = self.Yslider.Value
         if Yloc > self.SmRange/2 and Yloc < self.PiezoMax-self.SmRange/2:
             self.Yslider.SetMin( Yloc-self.SmRange/2 )
@@ -445,6 +476,9 @@ class MainPanel( wx.Panel ):
         #print 'Y range small'
         
     def On_button_YrangeMed_Clicked( self, event ):
+        """
+        Handler for rescaling y-piezo slider range.
+        """
         Yloc = self.Yslider.Value
         if Yloc > self.MedRange/2 and Yloc < self.PiezoMax-self.MedRange/2:
             self.Yslider.SetMin( Yloc-self.MedRange/2 )
@@ -463,6 +497,9 @@ class MainPanel( wx.Panel ):
         #print 'Y range medium'
         
     def On_button_YrangeLg_Clicked( self, event ):
+        """
+        Handler for rescaling y-piezo slider range.
+        """
         Yloc = self.Yslider.Value
         self.Yslider.SetMin( self.PiezoMin )
         self.YsliderMin.SetLabel( str(self.PiezoMin/1000.0) )
@@ -473,11 +510,17 @@ class MainPanel( wx.Panel ):
         #print 'Y range large'
         
     def On_Yslider_Changed( self, event ):
+        """
+        Handler for responding to slider input.
+        """
         Yloc = self.Yslider.Value/1000.0
         self.Ylocation.SetValue( str(Yloc) )
         self.piezoY['control'].SetPosition( position=Yloc )
         
     def On_text_Xlocation_Changed( self, event ):
+        """
+        Handler for updating the z-piezo position in response to text entry.
+        """
         Xloc = float(self.Xlocation.GetValue())*1000
         if Xloc > self.Xslider.GetMax() or Xloc < self.Xslider.GetMin():
             # jump to full-scale
@@ -499,6 +542,9 @@ class MainPanel( wx.Panel ):
             self.piezoX['control'].SetPositionSmooth( position=Xloc/1000.0, step=0.25 )
     
     def On_button_XrangeSmall_Clicked( self, event ):
+        """
+        Handler for rescaling x-piezo slider range.
+        """
         Xloc = self.Xslider.Value
         if Xloc > self.SmRange/2 and Xloc < self.PiezoMax-self.SmRange/2:
             self.Xslider.SetMin( Xloc-self.SmRange/2 )
@@ -517,6 +563,9 @@ class MainPanel( wx.Panel ):
         #print 'X range small'
         
     def On_button_XrangeMed_Clicked( self, event ):
+        """
+        Handler for rescaling x-piezo slider range.
+        """
         Xloc = self.Xslider.Value
         if Xloc > self.MedRange/2 and Xloc < self.PiezoMax-self.MedRange/2:
             self.Xslider.SetMin( Xloc-self.MedRange/2 )
@@ -535,6 +584,9 @@ class MainPanel( wx.Panel ):
         #print 'X range medium'
         
     def On_button_XrangeLg_Clicked( self, event ):
+        """
+        Handler for rescaling x-piezo slider range.
+        """
         Xloc = self.Xslider.Value
         self.Xslider.SetMin( self.PiezoMin )
         self.XsliderMin.SetLabel( str(self.PiezoMin/1000.0) )
@@ -545,6 +597,9 @@ class MainPanel( wx.Panel ):
         #print 'X range large'
         
     def On_Xslider_Changed( self, event ):
+        """
+        Handler for responding to slider input.
+        """
         Xloc = self.Xslider.Value/1000.0
         self.Xlocation.SetValue( str(Xloc) )
         self.piezoX['control'].SetPosition( position=Xloc )

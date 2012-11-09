@@ -146,6 +146,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def clear_fig2( self, event ):
+        """ Clear spectra plot. """
         self.moveline = None
         self.line_list = []
         self.fig2.axes.cla()
@@ -210,6 +211,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def make_cmap_matrix( self ):
+        """ make matrix of colormap points """
         if self.data is None: return True
         self.cmap_matrix = pylab.zeros([ len(self.data['ypoints']),
                                     len(self.data['xpoints']) ])
@@ -217,6 +219,7 @@ class Raster( Raster_GUI.MainFrame ):
         
 
     def move_to_position( self, position ):
+        """ move piezos """
         self.piezoX['control'].SetPositionSmooth( position=position['x'], step=0.25 )
         self.piezoY['control'].SetPositionSmooth( position=position['y'], step=0.25 )
         
@@ -224,6 +227,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def on_button_move_to_click_clicked( self, event ):
+        """ Event handler. """
         if self.move_to_click == False:
             self.move_to_click = True
             self.button_move_to_click.SetLabel("Cancel")
@@ -233,6 +237,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def on_button_save_clicked( self, event ):
+        """ Event handler. """
         if event!="start_3D" and self.data is None: return True
         
         dlg = wx.FileDialog( self, ("Save data to a *.hdf5 file " +
@@ -268,6 +273,7 @@ class Raster( Raster_GUI.MainFrame ):
     
 
     def on_button_start_clicked( self, event ):
+        """ Event handler. """
         # Trigger the worker thread unless it's already busy
         if self.positioners is not None:
             self.line_list = []
@@ -297,6 +303,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def on_button_stop_clicked( self, event ):
+        """ Event handler. """
         # Flag the worker thread to stop if running
         if self.worker:
             self.statusbar.SetStatusText('Trying to abort scan.', 0)
@@ -304,12 +311,14 @@ class Raster( Raster_GUI.MainFrame ):
             self.button_save.SetLabel('Save partial')
 
     def on_choice_winspec_or_apds(self, event):
+        """ Event handler. """
         if self.choice_Winspec_or_APDs.GetSelection() == 0:
             self.hide_APD_controls()
         else:
             self.show_APD_controls()
 
     def on_click_canvas1( self, event ):
+        """ Event handler. """
         if not event.inaxes: return True
         if self.data is None: return True
         
@@ -359,6 +368,7 @@ class Raster( Raster_GUI.MainFrame ):
         
 
     def update_fig2(self, ix=None, iy=None):
+        """ Event handler. """
         if len(self.line_list) == 0:
             self.fig2.axes.cla()
             self.fig2.canvas.draw()
@@ -389,6 +399,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def on_close_MainFrame( self, event ):
+        """ Event handler. """
         self.Destroy()
         event.Skip()
 
@@ -403,6 +414,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def on_grid_label_right_click( self, event ):
+        """ Event handler. """
         if event.GetCol() == self.rowlabel_column:
             if not hasattr(self, "popupID2"):
                 self.popupID2 = wx.NewId()
@@ -416,6 +428,7 @@ class Raster( Raster_GUI.MainFrame ):
             menu.Destroy()
 
     def on_grid_leftclick( self, event ):
+        """ Event handler. """
         row = event.GetRow()
         col = event.GetCol()
         
@@ -440,12 +453,13 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def on_leave_axes2( self, event ):
+        """ Event handler. """
         self.statusbar.SetStatusText( "", 1 )
         return True
 
 
     def on_menu_file_open( self, event ):
-        """ we can only open gzip'd pickles with extension *.HuG or hdf5 files
+        """ we can only open gzip'd pickles with extension *.HuG* or *hdf5* files
         """
         if self.worker is not None:
             self.statusbar.SetStatusText('Must stop scan before loading data.')
@@ -536,6 +550,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def on_menu_scan_3D( self, event ):
+        """ Event handler. """
         if self.menu_scan_3D.IsChecked():
             self.show_3D_controls()
         else:
@@ -543,6 +558,7 @@ class Raster( Raster_GUI.MainFrame ):
             
 
     def on_move_in_axes1( self, event ):
+        """ Event handler. """
         self.mouse_on_colormap = True
         if not event.inaxes: return True
         x = event.xdata
@@ -578,6 +594,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def on_move_in_axes2( self, event ):
+        """ Event handler. """
         if not event.inaxes: return True
         x = event.xdata
         y = event.ydata
@@ -594,6 +611,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def on_slider_integration_min_moving( self, event ):
+        """ Event handler. """
         if self.data is None: return True
         if not hasattr(self,'line_min'): return True
         if self.line_min is None: return True
@@ -610,6 +628,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def on_slider_integration_min_changed( self, event ):
+        """ Event handler. """
         if self.data is None: return True
         if not hasattr(self,'line_min'): return True
         if self.line_min is None: return True
@@ -620,9 +639,10 @@ class Raster( Raster_GUI.MainFrame ):
                     signal = scan['lum'][self.slider_integration_min.GetValue():self.slider_integration_max.GetValue()]
                     self.cmap_matrix[scan['iy'],scan['ix']] = pylab.sum( signal )
         self.plot_data()
-	
+
 
     def on_slider_integration_max_moving( self, event ):
+        """ Event handler. """
         if self.data is None: return True
         if not hasattr(self,'line_max'): return True
         if self.line_max is None: return True
@@ -640,6 +660,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def on_slider_integration_max_changed( self, event ):
+        """ Event handler. """
         if self.data is None: return True
         if not hasattr(self,'line_max'): return True
         if self.line_max is None: return True
@@ -670,6 +691,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def on_thread_update( self, event ):
+        """ Event handler. """
         if self.mouse_on_colormap == False:
             pass
         if event.flag == 'Z':
@@ -687,6 +709,7 @@ class Raster( Raster_GUI.MainFrame ):
             self.update_colormap()
 
     def on_txtctrl_APDacq_changed( self, event ):
+        """ Event handler. """
         if self.txtctrl_scan_width.GetValue() != "":
             try:
                 self.APD_t_acq = int(round( float(self.txtctrl_APDacq.GetValue()) ))
@@ -696,12 +719,14 @@ class Raster( Raster_GUI.MainFrame ):
                 self.txtctrl_APDacq.SetValue(str(self.APD_t_acq))
             
     def on_txtctrl_scan_width_changed( self, event ):
+        """ Event handler. """
         if self.txtctrl_scan_width.GetValue() != "":
             self.scan_width = float( self.txtctrl_scan_width.GetValue() )
             if self.txtctrl_scan_num_xpoints.GetValue() != "" and self.scan_num_xpoints > 1:
                 self.txtlabel_scan_width_resolution.SetLabel( "%.3f" % (self.scan_width/(self.scan_num_xpoints-1)) )
     
     def on_txtctrl_scan_num_xpoints_changed( self, event ):
+        """ Event handler. """
         if self.txtctrl_scan_num_xpoints.GetValue() != "":
             self.scan_num_xpoints = int( self.txtctrl_scan_num_xpoints.GetValue() )
             if self.txtctrl_scan_width.GetValue() != "" and self.scan_num_xpoints > 1:
@@ -709,6 +734,7 @@ class Raster( Raster_GUI.MainFrame ):
     
     
     def on_txtctrl_scan_height_changed( self, event ):
+        """ Event handler. """
         if self.txtctrl_scan_height.GetValue() != "":
             self.scan_height = float( self.txtctrl_scan_height.GetValue() )
             if self.txtctrl_scan_num_ypoints.GetValue() != "" and self.scan_num_ypoints > 1:
@@ -716,6 +742,7 @@ class Raster( Raster_GUI.MainFrame ):
     
     
     def on_txtctrl_scan_num_ypoints_changed( self, event ):
+        """ Event handler. """
         if self.txtctrl_scan_num_ypoints.GetValue() != "":
             self.scan_num_ypoints = int( self.txtctrl_scan_num_ypoints.GetValue() )
             if self.txtctrl_scan_height.GetValue() != "" and self.scan_num_ypoints > 1:
@@ -723,6 +750,7 @@ class Raster( Raster_GUI.MainFrame ):
     
 
     def on_txtctrl_scan_zrange_changed( self, event ):
+        """ Event handler. """
         if self.txtctrl_scan_zrange.GetValue() != "":
             self.scan_zrange = float( self.txtctrl_scan_zrange.GetValue() )
             if self.txtctrl_scan_num_zpoints.GetValue() != "" and self.scan_num_zpoints > 1:
@@ -730,6 +758,7 @@ class Raster( Raster_GUI.MainFrame ):
     
     
     def on_txtctrl_scan_num_zpoints_changed( self, event ):
+        """ Event handler. """
         if self.txtctrl_scan_num_zpoints.GetValue() != "":
             self.scan_num_zpoints = int( self.txtctrl_scan_num_zpoints.GetValue() )
             if self.txtctrl_scan_zrange.GetValue() != "" and self.scan_num_zpoints > 1:
@@ -815,12 +844,14 @@ class Raster( Raster_GUI.MainFrame ):
         self.update_fig1_markers()
 
     def update_fig1_markers(self):
+        """ redraw makers. """
         for line in self.line_list:
             self.fig1.axes.plot( line['x'], line['y'], 'o', color=[c/255.0 for c in line['color']],
                                 scalex=False, scaley=False )
         self.fig1.canvas.draw()
 
     def redraw_fig2( self ):
+        """ Redraw figure. """
         if hasattr( self, 'line_min' ):
             self.fig2.axes.draw_artist( self.line_min )
         if hasattr( self, 'line_max' ):
@@ -868,6 +899,7 @@ class Raster( Raster_GUI.MainFrame ):
                 d.create_dataset( 'apd_counts', data=apd_counts, compression='gzip' )
 
     def set_line_color( self, row, color, update_plot=True ):
+        """ Sets line color of spectra. """
         self.line_list[row]['color'] = color
         self.grid.SetCellBackgroundColour( row, self.grid_color_column, color )
         if update_plot:
@@ -876,6 +908,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def update_moveline_spectrum( self, ix, iy ):
+        """ update spectrum as the mouse moves over the colormap """
         self.fig2.canvas.restore_region( self.fig2bg )
         try:
             if self.data['scans'][ix][iy] is not None:
@@ -890,6 +923,7 @@ class Raster( Raster_GUI.MainFrame ):
 
 
     def within_piezo_limits( self ):
+        """ check if the requested scan range can fit within the piezo travel range. """
         X = self.piezoX['control'].PositionCh1
         Y = self.piezoY['control'].PositionCh1
         Z = self.piezoZ['control'].PositionCh1

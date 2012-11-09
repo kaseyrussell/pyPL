@@ -42,7 +42,8 @@ ID_Joystick_Reinitialize = wx.NewId()
 ID_PositionLog_Erase = wx.NewId()
 ID_MarkerLog_Erase = wx.NewId()
 
-class MainApp( wx.App ): 
+class MainApp( wx.App ):
+    """ This is the main event loop for the pyPL program. """
     def __init__( self, redirect=False, filename=None ):
         wx.App.__init__( self, redirect, filename )
         self.evtloop = wx.EventLoop()
@@ -324,8 +325,9 @@ class JoystickThread( threading.Thread ):
         self.start()
         
     def run( self ):
-        import JoystickControl
-        JoystickControl.StartControl( self.app, self.positioners )
+        """ Starts the thread monitoring the joystick. """
+        import joystick_control
+        joystick_control.StartControl( self.app, self.positioners )
         
 
 class MotorPositionMonitorThread( threading.Thread ):
@@ -344,6 +346,7 @@ class MotorPositionMonitorThread( threading.Thread ):
         self.start()
         
     def run(self):
+        """ Starts the thread monitoring the motor positions. """
         movement_threshold = 0.001 # threshold for updating (mm)
         time_interval = 0.3 # check this often (seconds)
         
@@ -372,6 +375,7 @@ class MotorPositionMonitorThread( threading.Thread ):
             time.sleep( time_interval )
 
     def abort(self):
+        """ Sets a flag to signal the thread that we want it to terminate. """
         self._want_abort = True
             
 
@@ -416,7 +420,7 @@ if __name__== '__main__':
             
         piezoX = APTPiezo( app.panel_aptcontrols, HWSerialNum=detected_piezoX_serialnum, style=wx.SUNKEN_BORDER )
         piezoX.SetToDisplayPosition()
-        piezoX.SetToClosedLoopMode()
+        ##piezoX.SetToClosedLoopMode()
         #print "piezoX position:", piezoX.GetPosition() # FIX THIS!!! Why doesn't this method work?
         #box_piezos.Add( piezoX, proportion=1, flag=wx.EXPAND )
         box_allcontrols.Add( piezoX, proportion=1, flag=wx.EXPAND )
@@ -428,7 +432,7 @@ if __name__== '__main__':
         
         piezoY = APTPiezo( app.panel_aptcontrols, HWSerialNum=detected_piezoY_serialnum, style=wx.SUNKEN_BORDER )
         piezoY.SetToDisplayPosition()
-        piezoY.SetToClosedLoopMode()
+        ##piezoY.SetToClosedLoopMode()
         #box_piezos.Add( piezoY, proportion=1, flag=wx.EXPAND )
         box_allcontrols.Add( piezoY, proportion=1, flag=wx.EXPAND )
         app.positioners['piezoY'] = dict( control=piezoY, direction=1 )
@@ -440,7 +444,7 @@ if __name__== '__main__':
     
         piezoZ = APTPiezo( app.panel_aptcontrols, HWSerialNum=detected_piezoZ_serialnum, style=wx.SUNKEN_BORDER )
         piezoZ.SetToDisplayPosition()
-        piezoZ.SetToClosedLoopMode()
+        ##piezoZ.SetToClosedLoopMode()
         #box_piezos.Add( piezoZ, proportion=1, flag=wx.EXPAND )
         box_allcontrols.Add( piezoZ, proportion=1, flag=wx.EXPAND )
         app.positioners['piezoZ'] = dict( control=piezoZ, direction=1 )

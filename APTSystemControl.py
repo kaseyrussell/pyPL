@@ -23,16 +23,22 @@ class APTSystem( wx.lib.activex.ActiveXCtrl ):
         self.ctrl.StartCtrl()
     
     def GetNumMotorControllerCards( self ):
+        """ runs the activeX command *GetNumHWUnitsEx* to return
+        the number of stepper motor controller cards in the system. """
         numcards = c_long()
         self.ctrl.GetNumHWUnitsEx( motorcontrollercard, byref( numcards ) )
         return numcards.value
 
     def GetNumPiezoControllerCards( self ):
+        """ runs the activeX command *GetNumHWUnitsEx* to return
+        the number of piezo controller cards in the system. """
         numcards = c_long()
         self.ctrl.GetNumHWUnitsEx( piezocontrollercard, byref( numcards ) )
         return numcards.value
 
     def GetMotorSerialNumbers( self ):
+        """ runs the activeX command *GetHWSerialNumEx* to return
+        a list of serial numbers for all of the motor controller cards."""
         serialnumber = c_long()
         numberlist = None
         numcards = self.GetNumMotorControllerCards()
@@ -44,6 +50,8 @@ class APTSystem( wx.lib.activex.ActiveXCtrl ):
         return numberlist
     
     def GetPiezoSerialNumbers( self ):
+        """ runs the activeX command *GetHWSerialNumEx* to return
+        a list of serial numbers for all of the piezo controller cards."""
         serialnumber = c_long()
         numberlist = None
         numcards = self.GetNumPiezoControllerCards()
@@ -55,6 +63,9 @@ class APTSystem( wx.lib.activex.ActiveXCtrl ):
         return numberlist
     
     def GetHWUnits( self ):
+        """ runs the activeX command *GetNumHWUnitsEx* to return
+        the number of hardware units connected."""
+   
         hwtypes = range(11,44)
         types = []
         for hw in hwtypes:

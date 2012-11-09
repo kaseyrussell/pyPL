@@ -1,0 +1,217 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Position Log &mdash; pyPL 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="pyPL 1.0 documentation" href="index.html" />
+    <link rel="next" title="Raster Scan" href="pyRaster.html" />
+    <link rel="prev" title="Marker Manager" href="ManageMarkers.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pyRaster.html" title="Raster Scan"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="ManageMarkers.html" title="Marker Manager"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">pyPL 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="position-log">
+<span id="positionlogger"></span><h1>Position Log<a class="headerlink" href="#position-log" title="Permalink to this headline">¶</a></h1>
+<img alt="_images/position_logger.PNG" src="_images/position_logger.PNG" />
+<span class="target" id="module-PositionLogger"></span><p>Window to save/delete the position log and markers.
+KJR 30 Oct 2010</p>
+<dl class="class">
+<dt id="PositionLogger.MainApp">
+<em class="property">class </em><tt class="descclassname">PositionLogger.</tt><tt class="descname">MainApp</tt><big>(</big><em>redirect=False</em>, <em>filename=None</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainApp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainApp" title="Permalink to this definition">¶</a></dt>
+<dd><p>...</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="PositionLogger.MainFrame">
+<em class="property">class </em><tt class="descclassname">PositionLogger.</tt><tt class="descname">MainFrame</tt><big>(</big><em>parent=None</em>, <em>id=-1</em>, <em>title='Position Logger'</em>, <em>size=wx.Size(500</em>, <em>500)</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame" title="Permalink to this definition">¶</a></dt>
+<dd><p>position log window.</p>
+<dl class="method">
+<dt id="PositionLogger.MainFrame.add_menu_bar">
+<tt class="descname">add_menu_bar</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.add_menu_bar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.add_menu_bar" title="Permalink to this definition">¶</a></dt>
+<dd><p>add menu bar to window.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.on_button_clicked_add_marker">
+<tt class="descname">on_button_clicked_add_marker</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.on_button_clicked_add_marker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.on_button_clicked_add_marker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.on_button_clicked_autoscale_range">
+<tt class="descname">on_button_clicked_autoscale_range</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.on_button_clicked_autoscale_range"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.on_button_clicked_autoscale_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.on_button_clicked_move_to_click">
+<tt class="descname">on_button_clicked_move_to_click</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.on_button_clicked_move_to_click"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.on_button_clicked_move_to_click" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.on_button_clicked_move_to_marker">
+<tt class="descname">on_button_clicked_move_to_marker</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.on_button_clicked_move_to_marker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.on_button_clicked_move_to_marker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.on_button_clicked_reset_range">
+<tt class="descname">on_button_clicked_reset_range</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.on_button_clicked_reset_range"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.on_button_clicked_reset_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.on_close_mainframe">
+<tt class="descname">on_close_mainframe</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.on_close_mainframe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.on_close_mainframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.on_mouse_clicked">
+<tt class="descname">on_mouse_clicked</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.on_mouse_clicked"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.on_mouse_clicked" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.on_stuff_menu_erase_marker_log">
+<tt class="descname">on_stuff_menu_erase_marker_log</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.on_stuff_menu_erase_marker_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.on_stuff_menu_erase_marker_log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.on_stuff_menu_erase_position_log">
+<tt class="descname">on_stuff_menu_erase_position_log</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.on_stuff_menu_erase_position_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.on_stuff_menu_erase_position_log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.on_stuff_menu_load_position_log">
+<tt class="descname">on_stuff_menu_load_position_log</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.on_stuff_menu_load_position_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.on_stuff_menu_load_position_log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.on_stuff_menu_manage_markers">
+<tt class="descname">on_stuff_menu_manage_markers</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.on_stuff_menu_manage_markers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.on_stuff_menu_manage_markers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.on_stuff_menu_save_position_log">
+<tt class="descname">on_stuff_menu_save_position_log</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.on_stuff_menu_save_position_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.on_stuff_menu_save_position_log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="PositionLogger.MainFrame.update_plot">
+<tt class="descname">update_plot</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/PositionLogger.html#MainFrame.update_plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#PositionLogger.MainFrame.update_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the position log plot.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="ManageMarkers.html"
+                        title="previous chapter">Marker Manager</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pyRaster.html"
+                        title="next chapter">Raster Scan</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/PositionLogger.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="pyRaster.html" title="Raster Scan"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="ManageMarkers.html" title="Marker Manager"
+             >previous</a> |</li>
+        <li><a href="index.html">pyPL 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Kasey J. Russell.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

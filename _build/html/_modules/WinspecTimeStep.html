@@ -1,0 +1,468 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>WinspecTimeStep &mdash; pyPL 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="pyPL 1.0 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">pyPL 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for WinspecTimeStep</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/python</span>
+<span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Here we have a window to control timestepping </span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">from</span> <span class="nn">wx.lib.pubsub</span> <span class="kn">import</span> <span class="n">Publisher</span>
+<span class="kn">from</span> <span class="nn">wx._controls</span> <span class="kn">import</span> <span class="n">TE_PROCESS_ENTER</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib</span>
+<span class="k">if</span> <span class="n">matplotlib</span><span class="o">.</span><span class="n">get_backend</span><span class="p">()</span> <span class="o">!=</span> <span class="s">&#39;WXAgg&#39;</span><span class="p">:</span>
+    <span class="c"># this is actually just to check if it&#39;s loaded. if it already was loaded</span>
+    <span class="c"># and set to a different backend, then we couldn&#39;t change it anyway.</span>
+    <span class="n">matplotlib</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s">&#39;WXAgg&#39;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">matplotlib.backends.backend_wxagg</span> <span class="kn">import</span> <span class="n">FigureCanvasWxAgg</span> <span class="k">as</span> <span class="n">FigureCanvas</span>
+<span class="kn">from</span> <span class="nn">matplotlib.backends.backend_wx</span> <span class="kn">import</span> <span class="n">NavigationToolbar2Wx</span> <span class="k">as</span> <span class="n">MPLToolbar</span>
+<span class="kn">import</span> <span class="nn">pylab</span>
+<span class="kn">from</span> <span class="nn">threading</span> <span class="kn">import</span> <span class="n">Thread</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">import</span> <span class="nn">kasey_utils</span> <span class="kn">as</span> <span class="nn">kc</span>
+<span class="kn">import</span> <span class="nn">kasey_fitspectra</span> <span class="kn">as</span> <span class="nn">kcfit</span>
+<span class="kn">import</span> <span class="nn">WinspecUtils</span> <span class="kn">as</span> <span class="nn">spe</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">import</span> <span class="nn">comtypes.client</span> <span class="kn">as</span> <span class="nn">cc</span>
+<span class="n">cc</span><span class="o">.</span><span class="n">GetModule</span><span class="p">(</span> <span class="p">(</span><span class="s">&#39;{1A762221-D8BA-11CF-AFC2-508201C10000}&#39;</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">11</span><span class="p">))</span>
+<span class="kn">import</span> <span class="nn">comtypes.gen.WINX32Lib</span> <span class="kn">as</span> <span class="nn">WinSpecLib</span>
+<span class="n">expt_running</span> <span class="o">=</span> <span class="n">WinSpecLib</span><span class="o">.</span><span class="n">EXP_RUNNING</span>
+
+<span class="kn">import</span> <span class="nn">win32com.client</span> <span class="kn">as</span> <span class="nn">w32c</span>
+<span class="kn">from</span> <span class="nn">win32com.client</span> <span class="kn">import</span> <span class="n">constants</span>
+
+<span class="kn">from</span> <span class="nn">ctypes</span> <span class="kn">import</span> <span class="n">byref</span><span class="p">,</span> <span class="n">pointer</span><span class="p">,</span> <span class="n">c_long</span><span class="p">,</span> <span class="n">c_float</span><span class="p">,</span> <span class="n">c_bool</span>
+
+
+
+
+<span class="k">class</span> <span class="nc">MainApp</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">):</span> 
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">redirect</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">redirect</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">mainframe</span> <span class="o">=</span> <span class="n">MakeMainWindow</span><span class="p">()</span>
+        
+<span class="k">class</span> <span class="nc">MakeMainWindow</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">Frame</span> <span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span> <span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&#39;WinSpec Time Step&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">Size</span><span class="p">(</span><span class="mi">330</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mainpanel</span> <span class="o">=</span> <span class="n">MainPanel</span><span class="p">(</span> <span class="bp">self</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="c"># Define notification event for thread completion</span>
+<span class="n">EVT_RESULT_ID</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+<span class="n">EVT_UPDATE_ID</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+
+<div class="viewcode-block" id="EVT_RESULT"><a class="viewcode-back" href="../WinspecTimeStep.html#WinspecTimeStep.EVT_RESULT">[docs]</a><span class="k">def</span> <span class="nf">EVT_RESULT</span><span class="p">(</span><span class="n">win</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Define Result Event.&quot;&quot;&quot;</span>
+    <span class="n">win</span><span class="o">.</span><span class="n">Connect</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">EVT_RESULT_ID</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="EVT_UPDATE"><a class="viewcode-back" href="../WinspecTimeStep.html#WinspecTimeStep.EVT_UPDATE">[docs]</a><span class="k">def</span> <span class="nf">EVT_UPDATE</span><span class="p">(</span><span class="n">win</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Define Update Event.&quot;&quot;&quot;</span>
+    <span class="n">win</span><span class="o">.</span><span class="n">Connect</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">EVT_UPDATE_ID</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="ResultEvent"><a class="viewcode-back" href="../WinspecTimeStep.html#WinspecTimeStep.ResultEvent">[docs]</a><span class="k">class</span> <span class="nc">ResultEvent</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">PyEvent</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Simple event to carry arbitrary result data.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Init Result Event.&quot;&quot;&quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PyEvent</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetEventType</span><span class="p">(</span><span class="n">EVT_RESULT_ID</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+</div>
+<div class="viewcode-block" id="UpdateEvent"><a class="viewcode-back" href="../WinspecTimeStep.html#WinspecTimeStep.UpdateEvent">[docs]</a><span class="k">class</span> <span class="nc">UpdateEvent</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">PyEvent</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Simple event to carry arbitrary result data.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Init Update Event.&quot;&quot;&quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PyEvent</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetEventType</span><span class="p">(</span><span class="n">EVT_UPDATE_ID</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+
+<span class="c"># Thread class that executes processing</span></div>
+<div class="viewcode-block" id="WorkerThread"><a class="viewcode-back" href="../WinspecTimeStep.html#WinspecTimeStep.WorkerThread">[docs]</a><span class="k">class</span> <span class="nc">WorkerThread</span><span class="p">(</span><span class="n">Thread</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Worker Thread Class. I stole this class (and the Result Event Class above) from wiki.wxpython.org&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Init Worker Thread Class.&quot;&quot;&quot;</span>
+        <span class="n">Thread</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_want_abort</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FnameBase</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">FnameBase</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TimeStepInSec</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">TimeStepInSec</span>
+
+<div class="viewcode-block" id="WorkerThread.run"><a class="viewcode-back" href="../WinspecTimeStep.html#WinspecTimeStep.WorkerThread.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Start thread. &quot;&quot;&quot;</span>
+        <span class="n">w32c</span><span class="o">.</span><span class="n">pythoncom</span><span class="o">.</span><span class="n">CoInitialize</span><span class="p">()</span>
+        <span class="n">WinspecDoc</span> <span class="o">=</span> <span class="n">w32c</span><span class="o">.</span><span class="n">Dispatch</span><span class="p">(</span><span class="s">&quot;WinX32.DocFile&quot;</span><span class="p">)</span>
+        <span class="n">WinspecExpt</span> <span class="o">=</span> <span class="n">w32c</span><span class="o">.</span><span class="n">Dispatch</span><span class="p">(</span><span class="s">&quot;WinX32.ExpSetup&quot;</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">takespectrum</span><span class="p">(</span> <span class="n">scantime</span> <span class="p">):</span>
+            <span class="k">if</span> <span class="n">WinspecExpt</span><span class="o">.</span><span class="n">Start</span><span class="p">(</span><span class="n">WinspecDoc</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span> <span class="c"># start the experiment</span>
+                <span class="c"># Wait for acquisition to finish (and check for errors continually)</span>
+                <span class="c"># If we didn&#39;t care about errors, we could just run WinspecExpt.WaitForExperiment()</span>
+                <span class="n">expt_is_running</span><span class="p">,</span> <span class="n">status</span> <span class="o">=</span> <span class="n">WinspecExpt</span><span class="o">.</span><span class="n">GetParam</span><span class="p">(</span> <span class="n">expt_running</span> <span class="p">)</span>
+                <span class="k">while</span> <span class="n">expt_is_running</span> <span class="ow">and</span> <span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">expt_is_running</span><span class="p">,</span> <span class="n">status</span> <span class="o">=</span> <span class="n">WinspecExpt</span><span class="o">.</span><span class="n">GetParam</span><span class="p">(</span><span class="n">expt_running</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">status</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">print</span> <span class="s">&#39;MsgBox (&quot;Error running experiment.&quot;)&#39;</span>
+
+                <span class="n">datapointer</span> <span class="o">=</span> <span class="n">c_float</span><span class="p">()</span>
+                <span class="n">WinspecDoc</span><span class="o">.</span><span class="n">GetFrame</span><span class="p">(</span> <span class="mi">1</span><span class="p">,</span> <span class="n">datapointer</span> <span class="p">)</span>
+
+                <span class="c"># encode time in the filename</span>
+                <span class="n">WinspecDoc</span><span class="o">.</span><span class="n">SaveAs</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">FnameBase</span> <span class="o">+</span> <span class="s">&quot;_</span><span class="si">%.0f</span><span class="s">s&quot;</span> <span class="o">%</span> <span class="n">scantime</span> <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&quot;Could not initiate acquisition.&quot;</span>
+
+        <span class="n">steps_completed</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_want_abort</span><span class="p">:</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="p">,</span> <span class="n">ResultEvent</span><span class="p">(</span><span class="bp">None</span><span class="p">))</span>
+                <span class="n">w32c</span><span class="o">.</span><span class="n">pythoncom</span><span class="o">.</span><span class="n">CoUninitialize</span><span class="p">()</span>
+                <span class="k">return</span>
+
+            <span class="n">tInitial</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="n">takespectrum</span><span class="p">(</span> <span class="n">tInitial</span> <span class="o">-</span> <span class="n">t0</span> <span class="p">)</span>
+            <span class="n">steps_completed</span> <span class="o">+=</span> <span class="mi">1</span>
+        
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_want_abort</span><span class="p">:</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="p">,</span> <span class="n">ResultEvent</span><span class="p">(</span><span class="bp">None</span><span class="p">))</span>
+                <span class="n">w32c</span><span class="o">.</span><span class="n">pythoncom</span><span class="o">.</span><span class="n">CoUninitialize</span><span class="p">()</span>
+                <span class="k">return</span>
+
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="p">,</span> <span class="n">UpdateEvent</span><span class="p">(</span><span class="n">steps_completed</span><span class="p">))</span>
+            <span class="n">scandelay</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">tInitial</span>
+            <span class="n">time_to_sleep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TimeStepInSec</span> <span class="o">-</span> <span class="n">scandelay</span>
+            <span class="k">if</span> <span class="n">time_to_sleep</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span> <span class="n">time_to_sleep</span> <span class="p">)</span>
+            
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="p">,</span> <span class="n">ResultEvent</span><span class="p">(</span><span class="bp">True</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="WorkerThread.abort"><a class="viewcode-back" href="../WinspecTimeStep.html#WinspecTimeStep.WorkerThread.abort">[docs]</a>    <span class="k">def</span> <span class="nf">abort</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;abort worker thread.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_want_abort</span> <span class="o">=</span> <span class="mi">1</span>
+
+</div></div>
+<span class="k">class</span> <span class="nc">MainPanel</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span> <span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span> <span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span> <span class="p">)</span>
+        
+        <span class="n">box</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span> <span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">DataPath</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>   <span class="c"># we don&#39;t yet know where the data is stored</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SPEFiles</span> <span class="o">=</span> <span class="bp">None</span> <span class="c"># a list of SPE files to plot</span>
+        
+        <span class="sd">&quot;&quot;&quot; Set the time.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">boxSetTime</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span> <span class="p">)</span>
+        <span class="n">boxSetTime</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&quot;Time between scans (sec.):&quot;</span> <span class="p">),</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">3</span> <span class="p">)</span>
+        <span class="n">stepList</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;10&#39;</span><span class="p">,</span> <span class="s">&#39;20&#39;</span><span class="p">,</span> <span class="s">&#39;30&#39;</span><span class="p">,</span> <span class="s">&#39;60&#39;</span><span class="p">,</span> <span class="s">&#39;120&#39;</span><span class="p">]</span>
+        <span class="n">defaulttimestep</span> <span class="o">=</span> <span class="n">stepList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TimeStepInSec</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span> <span class="n">defaulttimestep</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">combo_stepsize</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">defaulttimestep</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span><span class="mi">20</span><span class="p">),</span>
+                                           <span class="n">choices</span><span class="o">=</span><span class="n">stepList</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">combo_stepsize</span><span class="o">.</span><span class="n">SetToolTip</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">ToolTip</span><span class="p">(</span><span class="s">&quot;Select step time in seconds from dropdown-list&quot;</span><span class="p">))</span>
+        <span class="n">boxSetTime</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">combo_stepsize</span><span class="p">,</span> <span class="n">proportion</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">2</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">combo_stepsize</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">On_combo_stepsize_Changed</span> <span class="p">)</span>
+        <span class="n">box</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="n">boxSetTime</span><span class="p">,</span>  <span class="n">proportion</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span> <span class="p">)</span>
+        
+        <span class="sd">&quot;&quot;&quot; Set the filename base.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">boxSetFname</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span> <span class="p">)</span>
+        <span class="n">boxSetFname</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&quot;Filename base:&quot;</span> <span class="p">),</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">3</span> <span class="p">)</span>
+        <span class="n">defaultFnameBase</span> <span class="o">=</span> <span class="s">&quot;timeseries&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FnameBase</span> <span class="o">=</span> <span class="n">defaultFnameBase</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text_fname</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">defaultFnameBase</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">TE_PROCESS_ENTER</span> <span class="p">)</span>
+        <span class="n">boxSetFname</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">text_fname</span><span class="p">,</span> <span class="n">proportion</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">2</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text_fname</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT_ENTER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">On_SetFname_Changed</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text_fname</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">On_SetFname_Changed</span> <span class="p">)</span>
+        <span class="n">box</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="n">boxSetFname</span><span class="p">,</span>  <span class="n">proportion</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span> <span class="p">)</span>
+        
+        <span class="sd">&quot;&quot;&quot; See example filename.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text_exampleFname</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&quot;(e.g. &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">FnameBase</span> <span class="o">+</span> <span class="s">&quot;_XXXs.SPE)&quot;</span> <span class="p">)</span>
+        <span class="n">box</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">text_exampleFname</span><span class="p">,</span>  <span class="n">proportion</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span> <span class="p">)</span>
+        
+        <span class="sd">&quot;&quot;&quot; Disclaimer on directory</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">box</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> 
+                                <span class="s">&quot;Files will get saved in the current WinSpec directory.&quot;</span><span class="p">),</span>
+                                <span class="n">proportion</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span> <span class="p">)</span>
+        
+        <span class="sd">&quot;&quot;&quot; Start and Stop buttons</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">boxButtons</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_Start</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&#39;Start&#39;</span> <span class="p">)</span>
+        <span class="n">boxButtons</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">button_Start</span><span class="p">,</span> <span class="n">proportion</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_Start</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">On_button_Start_Clicked</span> <span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_Stop</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&#39;Stop&#39;</span> <span class="p">)</span>
+        <span class="n">boxButtons</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">button_Stop</span><span class="p">,</span> <span class="n">proportion</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_Stop</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">On_button_Stop_Clicked</span> <span class="p">)</span>
+        <span class="n">box</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="n">boxButtons</span><span class="p">,</span>  <span class="n">proportion</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span> <span class="p">)</span>
+
+        <span class="sd">&quot;&quot;&quot; Indicator text</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">100</span><span class="p">))</span>
+        <span class="n">box</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">,</span>  <span class="n">proportion</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span> <span class="p">)</span>
+        
+        <span class="sd">&quot;&quot;&quot; File dialog button</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_Directory</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&#39;Find SPE Files&#39;</span> <span class="p">)</span>
+        <span class="n">box</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">button_Directory</span><span class="p">,</span> <span class="n">proportion</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CENTER</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_Directory</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">On_button_Directory_Clicked</span> <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span> <span class="n">box</span> <span class="p">)</span>
+
+        <span class="c"># Set up event handler for any worker thread results</span>
+        <span class="n">EVT_RESULT</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnResult</span> <span class="p">)</span>
+        <span class="n">EVT_UPDATE</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnThreadUpdate</span> <span class="p">)</span>
+
+        <span class="c"># And indicate we don&#39;t have a worker thread yet</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">worker</span> <span class="o">=</span> <span class="bp">None</span>
+        
+        
+    <span class="k">def</span> <span class="nf">On_combo_stepsize_Changed</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">event</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Event Handler. &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TimeStepInSec</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">combo_stepsize</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span> <span class="p">)</span>
+        <span class="c">#print &#39;stepsize changed:&#39;, self.TimeStepInSec</span>
+    
+    <span class="k">def</span> <span class="nf">On_SetFname_Changed</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">event</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Event Handler. &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FnameBase</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">text_fname</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text_exampleFname</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span> <span class="s">&quot;(e.g. &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">FnameBase</span> <span class="o">+</span> <span class="s">&quot;_XXXs.SPE)&quot;</span> <span class="p">)</span>
+        <span class="c">#print &#39;filename base:&#39;, self.FnameBase</span>
+    
+    <span class="k">def</span> <span class="nf">On_button_Start_Clicked</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">event</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Start Computation.&quot;&quot;&quot;</span>
+        <span class="c"># Trigger the worker thread unless it&#39;s already busy</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="s">&#39;Starting scan.&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">worker</span> <span class="o">=</span> <span class="n">WorkerThread</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">setDaemon</span><span class="p">(</span> <span class="bp">True</span> <span class="p">)</span> <span class="c"># kill this thread if we close the main app</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+            <span class="c">#self.fig = pylab.figure()</span>
+            <span class="c">#self.current_fignum = pylab.get_fignums()[-1]</span>
+            <span class="c">#self.axes = self.fig.add_subplot(111)</span>
+            <span class="c">#self.fig.show()</span>
+            
+    <span class="k">def</span> <span class="nf">On_button_Stop_Clicked</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">event</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stop Computation.&quot;&quot;&quot;</span>
+        <span class="c"># Flag the worker thread to stop if running</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="s">&#39;Trying to abort scan.&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="o">.</span><span class="n">abort</span><span class="p">()</span>
+        
+    <span class="k">def</span> <span class="nf">On_button_Directory_Clicked</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">event</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Event Handler. &quot;&quot;&quot;</span>
+        <span class="n">dlg</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">DirDialog</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&quot;To enable plotting, select directory where WinSpec is saving the SPE files:&quot;</span><span class="p">,</span>
+                          <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">DD_DEFAULT_STYLE</span><span class="p">,</span>
+                          <span class="n">defaultPath</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">DataPath</span>
+                           <span class="p">)</span>
+
+        <span class="c"># If the user selects OK, then we process the dialog&#39;s data.</span>
+        <span class="c"># This is done by getting the path data from the dialog - BEFORE</span>
+        <span class="c"># we destroy it. </span>
+        <span class="k">if</span> <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">DataPath</span> <span class="o">=</span> <span class="n">dlg</span><span class="o">.</span><span class="n">GetPath</span><span class="p">()</span>
+            <span class="c">#print &#39;You selected: %s\n&#39; % self.DataPath</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span> <span class="n">pylab</span><span class="o">.</span><span class="n">get_fignums</span><span class="p">()</span> <span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">pylab</span><span class="o">.</span><span class="n">get_fignums</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_fignum</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fig</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">current_fignum</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">get_fignums</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">axes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotcolormap</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            
+
+        <span class="c"># Only destroy a dialog after you&#39;re done with it.</span>
+        <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">OnThreadUpdate</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">event</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Event Handler. &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span> <span class="s">&#39;Done with acquisition #</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span> <span class="n">pylab</span><span class="o">.</span><span class="n">get_fignums</span><span class="p">()</span> <span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">pylab</span><span class="o">.</span><span class="n">get_fignums</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_fignum</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotcolormap</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+<span class="c">#            self.axes.plot( event.data, &#39;-ob&#39; )</span>
+<span class="c">#            self.fig.canvas.draw()</span>
+
+    <span class="k">def</span> <span class="nf">OnResult</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Show Result status.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># Thread aborted (using our convention of None return)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="s">&#39;Scan aborted.&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">data</span> <span class="ow">is</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="c"># Process results here</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="s">&#39;Scan is done.&#39;</span><span class="p">)</span>
+        <span class="c"># In either event, the worker is done</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">worker</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">SetFname</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Set filename to save to. &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Fname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">FnameBase</span> <span class="o">+</span> <span class="s">&quot;_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_of_scan</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;s&quot;</span>
+        
+    <span class="k">def</span> <span class="nf">plotcolormap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; update colormap &quot;&quot;&quot;</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">DataPath</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\\</span><span class="s">&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">FnameBase</span> <span class="o">+</span> <span class="s">&#39;*.SPE&#39;</span> <span class="p">)</span> <span class="c"># get a list of all non-glued txt files</span>
+        
+        <span class="c"># assume filename is of the format: timeseriesvacuum_2640s.SPE</span>
+        <span class="c"># where 2640 is the time in seconds since the start of the series of scans</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c"># sort by acquisition start time</span>
+            <span class="n">files</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;s.SPE&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="p">)</span> 
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="c"># there was a file in there with the same filename base but that wasn&#39;t part of the series</span>
+            <span class="c"># (e.g. &quot;timeseriesvacuum_after blocking laser 10mn.SPE&quot;) </span>
+            <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">fname</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;s.SPE&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                    <span class="n">files</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span> <span class="n">fname</span> <span class="p">)</span>
+            <span class="n">files</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;s.SPE&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="p">)</span> 
+            
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;no SPE files found.&quot;</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        
+        <span class="k">if</span> <span class="n">files</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">SPEFiles</span><span class="p">:</span>
+            <span class="c"># print &quot;same list as last time.&quot;</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># presumably we could save some effort and not load the whole list every time,</span>
+            <span class="c"># but this program is meant to be used while taking spectra every 30sec or so,</span>
+            <span class="c"># which would give us plenty of time to refresh the plot each time.</span>
+            <span class="c"># but the plotting itself is probably the most expensive part, so this is moot...</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">SPEFiles</span> <span class="o">=</span> <span class="n">files</span>
+                
+            <span class="bp">self</span><span class="o">.</span><span class="n">spectra</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="p">[]</span>
+            
+            <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="nb">float</span><span class="p">(</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">fname</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;s.SPE&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">)</span> <span class="p">)</span>
+                
+                <span class="n">s</span> <span class="o">=</span> <span class="n">spe</span><span class="o">.</span><span class="n">Spectrum</span><span class="p">(</span> <span class="n">fname</span> <span class="p">)</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">remove_linear_background</span><span class="p">(</span> <span class="n">npoints</span><span class="o">=</span><span class="mi">10</span> <span class="p">)</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">normalize</span><span class="p">()</span>
+                
+                <span class="bp">self</span><span class="o">.</span><span class="n">spectra</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">s</span><span class="o">.</span><span class="n">lum</span> <span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">wavelen</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">wavelen</span>
+            
+        <span class="n">wavelen_image</span> <span class="o">=</span> <span class="n">kc</span><span class="o">.</span><span class="n">centers_to_corners</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">wavelen</span> <span class="p">)</span>
+        <span class="n">time_image</span> <span class="o">=</span> <span class="n">kc</span><span class="o">.</span><span class="n">centers_to_corners</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="p">)</span><span class="o">/</span><span class="mf">60.0</span>
+        <span class="n">spectra_image</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">array</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">spectra</span> <span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span> <span class="n">time_image</span><span class="p">,</span> <span class="n">wavelen_image</span><span class="p">,</span> <span class="n">spectra_image</span><span class="o">.</span><span class="n">transpose</span><span class="p">(),</span> <span class="n">cmap</span><span class="o">=</span><span class="s">&#39;copper&#39;</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span> <span class="n">wavelen_image</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">wavelen_image</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span> <span class="n">time_image</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">time_image</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span> <span class="s">&#39;Wavelength (nm)&#39;</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span> <span class="s">&#39;Time (min)&#39;</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">FnameBase</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+<span class="k">if</span> <span class="n">__name__</span><span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span> 
+    <span class="n">app</span> <span class="o">=</span> <span class="n">MainApp</span><span class="p">()</span>
+
+    <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
+    <span class="c">#print &#39;calling function...&#39;</span>
+    <span class="c">#takespectrum( &#39;test&#39;, 2.0 )</span>
+    <span class="c">#print &#39;ran&#39;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">pyPL 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Kasey J. Russell.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

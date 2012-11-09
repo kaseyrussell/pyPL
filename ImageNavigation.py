@@ -1,11 +1,8 @@
-#!/usr/bin/python
-""" 
-    Navigate to points on your sample by clicking on a picture of it.
+""" Navigate to points on your sample by clicking on a picture of it.
     This is part of the pyPL/pyPositioning program.
-    
-   Copyright 2010 Kasey Russell ( email: krussell _at_ post.harvard.edu )
-   Distributed under the GNU General Public License
- 
+
+    Copyright 2010 Kasey Russell ( email: krussell _at_ post.harvard.edu )
+    Distributed under the GNU General Public License
 """
 from __future__ import division
 import wx
@@ -26,13 +23,15 @@ ID_Help = wx.NewId()
 
 stage_image_flipped = False # is your PL visualization flipped wrt actual?
 
-class MainApp( wx.App ): 
+class MainApp( wx.App ):
+    """ ... """
     def __init__( self, redirect=False, filename=None ):
         wx.App.__init__( self, redirect, filename )
         
         self.mainframe = MainFrame()
         
 class MainFrame( wx.Frame ):
+    """Main image navigation window. """
     def __init__( self, parent=None, id=wx.ID_ANY, title='Image Navigation',
                  size=wx.Size(500,500) ):
         wx.Frame.__init__( self, None, id=id, title=title, size=size )
@@ -132,6 +131,7 @@ class MainFrame( wx.Frame ):
 
 
     def add_menu_bar(self):
+        """ Add menu bar to the window. """
         menuBar = wx.MenuBar()
 
         """ Image menu
@@ -214,6 +214,7 @@ class MainFrame( wx.Frame ):
         
 
     def on_button_clicked_calibrate_p1( self, event ):
+        """ Handler for button click. """
         if self.calibrate_p1 == False:
             self.calibrate_p1 = True
             self.info_calibration_p1.SetLabel("The next point you click on the picture will be recorded.")
@@ -234,6 +235,7 @@ class MainFrame( wx.Frame ):
         
         
     def on_button_clicked_calibrate_p2( self, event ):
+        """ Handler for button click. """
         if self.calibrate_p2 == False:
             self.calibrate_p2 = True
             self.info_calibration_p2.SetLabel("The next point you click on the picture will be recorded.")
@@ -254,6 +256,7 @@ class MainFrame( wx.Frame ):
         
         
     def on_button_clicked_move( self, event ):
+        """ Handler for button click. """
         if self.moveto == False:
             self.moveto = True
             if self.cid is not None:
@@ -268,15 +271,20 @@ class MainFrame( wx.Frame ):
             self.moveto = False
             self.txt_move_indicator.SetLabel( "move aborted." )
 
+    
     def on_flip_dropdown_changed( self, event ):
+        """ Handler for changing the flip/don't flip dropdown chooser. """
         if all( self.calibrated ):
             self.calculate_calibration()
     
+
     def on_help_menu_help( self, event ):
+        """ Handler dealing with selection of the help menu. """
         pass
     
     
     def on_image_menu_load_image( self, event ):
+        """ Handler. """
         filters = 'All files (*.*)|*.*|PNG files (*.png)|*.png|JPEG files (*.jpg,*.jpeg)|*.jpg;*.jpeg|TIFF files (*.tif,*.tiff)|*.tif;*.tiff'
         dialog = wx.FileDialog ( None, message = 'Open something....',
                                 wildcard = filters, style = wx.OPEN )
@@ -302,6 +310,7 @@ class MainFrame( wx.Frame ):
 
 
     def on_mouse_clicked( self, event ):
+        """ Event handler. """
         if not event.inaxes:
             return
         

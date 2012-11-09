@@ -1,0 +1,170 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>APTSystemControl &mdash; pyPL 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="pyPL 1.0 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">pyPL 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for APTSystemControl</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; In an ideal world, this will be a complete working library</span>
+<span class="sd">    for the APTMotor</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx.lib.activex</span>
+<span class="kn">import</span> <span class="nn">comtypes.client</span> <span class="kn">as</span> <span class="nn">cc</span>
+<span class="kn">from</span> <span class="nn">ctypes</span> <span class="kn">import</span> <span class="n">byref</span><span class="p">,</span> <span class="n">pointer</span><span class="p">,</span> <span class="n">c_long</span><span class="p">,</span> <span class="n">c_float</span><span class="p">,</span> <span class="n">c_bool</span>
+
+<span class="n">cc</span><span class="o">.</span><span class="n">GetModule</span><span class="p">(</span> <span class="p">(</span><span class="s">&#39;{9460A175-8618-4753-B337-61D9771C4C14}&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="p">)</span>
+<span class="n">progID_system</span> <span class="o">=</span> <span class="s">&#39;MG17SYSTEM.MG17SystemCtrl.1&#39;</span>
+<span class="kn">import</span> <span class="nn">comtypes.gen.MG17SystemLib</span> <span class="kn">as</span> <span class="nn">APTSystemLib</span>
+
+<span class="n">motorcontrollercard</span> <span class="o">=</span> <span class="n">APTSystemLib</span><span class="o">.</span><span class="n">CARD_SCC101</span> 
+<span class="n">piezocontrollercard</span> <span class="o">=</span> <span class="n">APTSystemLib</span><span class="o">.</span><span class="n">CARD_PCC101</span> 
+
+<div class="viewcode-block" id="APTSystem"><a class="viewcode-back" href="../APTSystemControl.html#APTSystemControl.APTSystem">[docs]</a><span class="k">class</span> <span class="nc">APTSystem</span><span class="p">(</span> <span class="n">wx</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">activex</span><span class="o">.</span><span class="n">ActiveXCtrl</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The System class derives from wx.lib.activex.ActiveXCtrl, which</span>
+<span class="sd">       is where all the heavy lifting with COM gets done.&quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span> <span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">pos</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">DefaultPosition</span><span class="p">,</span>
+                 <span class="n">size</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">DefaultSize</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;APTSystem&#39;</span> <span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">activex</span><span class="o">.</span><span class="n">ActiveXCtrl</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">progID_system</span><span class="p">,</span>
+                                            <span class="nb">id</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">style</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">StartCtrl</span><span class="p">()</span>
+    
+<div class="viewcode-block" id="APTSystem.GetNumMotorControllerCards"><a class="viewcode-back" href="../APTSystemControl.html#APTSystemControl.APTSystem.GetNumMotorControllerCards">[docs]</a>    <span class="k">def</span> <span class="nf">GetNumMotorControllerCards</span><span class="p">(</span> <span class="bp">self</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; runs the activeX command *GetNumHWUnitsEx* to return</span>
+<span class="sd">        the number of stepper motor controller cards in the system. &quot;&quot;&quot;</span>
+        <span class="n">numcards</span> <span class="o">=</span> <span class="n">c_long</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">GetNumHWUnitsEx</span><span class="p">(</span> <span class="n">motorcontrollercard</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span> <span class="n">numcards</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">numcards</span><span class="o">.</span><span class="n">value</span>
+</div>
+<div class="viewcode-block" id="APTSystem.GetNumPiezoControllerCards"><a class="viewcode-back" href="../APTSystemControl.html#APTSystemControl.APTSystem.GetNumPiezoControllerCards">[docs]</a>    <span class="k">def</span> <span class="nf">GetNumPiezoControllerCards</span><span class="p">(</span> <span class="bp">self</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; runs the activeX command *GetNumHWUnitsEx* to return</span>
+<span class="sd">        the number of piezo controller cards in the system. &quot;&quot;&quot;</span>
+        <span class="n">numcards</span> <span class="o">=</span> <span class="n">c_long</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">GetNumHWUnitsEx</span><span class="p">(</span> <span class="n">piezocontrollercard</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span> <span class="n">numcards</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">numcards</span><span class="o">.</span><span class="n">value</span>
+</div>
+<div class="viewcode-block" id="APTSystem.GetMotorSerialNumbers"><a class="viewcode-back" href="../APTSystemControl.html#APTSystemControl.APTSystem.GetMotorSerialNumbers">[docs]</a>    <span class="k">def</span> <span class="nf">GetMotorSerialNumbers</span><span class="p">(</span> <span class="bp">self</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; runs the activeX command *GetHWSerialNumEx* to return</span>
+<span class="sd">        a list of serial numbers for all of the motor controller cards.&quot;&quot;&quot;</span>
+        <span class="n">serialnumber</span> <span class="o">=</span> <span class="n">c_long</span><span class="p">()</span>
+        <span class="n">numberlist</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">numcards</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetNumMotorControllerCards</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">numcards</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">numberlist</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">card</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numcards</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">GetHWSerialNumEx</span><span class="p">(</span> <span class="n">motorcontrollercard</span><span class="p">,</span> <span class="n">card</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span><span class="n">serialnumber</span><span class="p">)</span> <span class="p">)</span>
+                <span class="n">numberlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">serialnumber</span><span class="o">.</span><span class="n">value</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">numberlist</span>
+    </div>
+<div class="viewcode-block" id="APTSystem.GetPiezoSerialNumbers"><a class="viewcode-back" href="../APTSystemControl.html#APTSystemControl.APTSystem.GetPiezoSerialNumbers">[docs]</a>    <span class="k">def</span> <span class="nf">GetPiezoSerialNumbers</span><span class="p">(</span> <span class="bp">self</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; runs the activeX command *GetHWSerialNumEx* to return</span>
+<span class="sd">        a list of serial numbers for all of the piezo controller cards.&quot;&quot;&quot;</span>
+        <span class="n">serialnumber</span> <span class="o">=</span> <span class="n">c_long</span><span class="p">()</span>
+        <span class="n">numberlist</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">numcards</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetNumPiezoControllerCards</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">numcards</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">numberlist</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">card</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numcards</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">GetHWSerialNumEx</span><span class="p">(</span> <span class="n">piezocontrollercard</span><span class="p">,</span> <span class="n">card</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span><span class="n">serialnumber</span><span class="p">)</span> <span class="p">)</span>
+                <span class="n">numberlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">serialnumber</span><span class="o">.</span><span class="n">value</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">numberlist</span>
+    </div>
+<div class="viewcode-block" id="APTSystem.GetHWUnits"><a class="viewcode-back" href="../APTSystemControl.html#APTSystemControl.APTSystem.GetHWUnits">[docs]</a>    <span class="k">def</span> <span class="nf">GetHWUnits</span><span class="p">(</span> <span class="bp">self</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; runs the activeX command *GetNumHWUnitsEx* to return</span>
+<span class="sd">        the number of hardware units connected.&quot;&quot;&quot;</span>
+   
+        <span class="n">hwtypes</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span><span class="mi">44</span><span class="p">)</span>
+        <span class="n">types</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">hw</span> <span class="ow">in</span> <span class="n">hwtypes</span><span class="p">:</span>
+            <span class="n">numunit</span> <span class="o">=</span> <span class="n">c_long</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">GetNumHWUnitsEx</span><span class="p">(</span> <span class="n">hw</span><span class="p">,</span> <span class="n">byref</span><span class="p">(</span> <span class="n">numunit</span> <span class="p">)</span> <span class="p">)</span>
+            <span class="k">print</span> <span class="n">hw</span><span class="p">,</span> <span class="n">numunit</span><span class="o">.</span><span class="n">value</span>
+            <span class="n">types</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">numunit</span><span class="o">.</span><span class="n">value</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">types</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">pyPL 1.0 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Kasey J. Russell.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
