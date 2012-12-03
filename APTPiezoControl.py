@@ -60,7 +60,7 @@ class APTPiezo( wx.lib.activex.ActiveXCtrl ):
         return self.min_position + frac*(self.max_position - self.min_position)
 
     def GetPosition( self, channel=channel1 ):
-        """ returns position in microns """
+        """ returns position in microns. unclear what happens if not in closed-loop mode... """
         position = c_float()
         self.ctrl.GetPosOutput( channel, byref(position) )
         if channel==channel1: self.PositionCh1 = position.value
@@ -117,7 +117,8 @@ class APTPiezo( wx.lib.activex.ActiveXCtrl ):
         """ I didn't call this Jog because 
             this is a hack that sets the position absolutely using a global step variable. """
         if stepsize == 'default': stepsize = self.StepSize
-        if channel==channel1: self.PositionCh1 = self.GetPosition(channel)+stepsize*direction
+        if channel==channel1: self.PositionCh1 = self.GetPosition(channel)+stepsize*direction # strange behavior if in open loop mode
+        #self.PositionCh1 += stepsize*direction
         self.SetPosition( channel, self.PositionCh1 )
         
     def StepDown( self, channel=channel1, direction=1.0, stepsize='default' ):
@@ -125,4 +126,5 @@ class APTPiezo( wx.lib.activex.ActiveXCtrl ):
             this is a hack that sets the position absolutely using a global step variable. """
         if stepsize == 'default': stepsize = self.StepSize
         if channel==channel1: self.PositionCh1 = self.GetPosition(channel)-stepsize*direction
+        #self.PositionCh1 -= stepsize*direction
         self.SetPosition( channel, self.PositionCh1 )

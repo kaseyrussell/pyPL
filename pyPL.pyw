@@ -420,7 +420,7 @@ if __name__== '__main__':
             
         piezoX = APTPiezo( app.panel_aptcontrols, HWSerialNum=detected_piezoX_serialnum, style=wx.SUNKEN_BORDER )
         piezoX.SetToDisplayPosition()
-        ##piezoX.SetToClosedLoopMode()
+        piezoX.SetToClosedLoopMode()
         #print "piezoX position:", piezoX.GetPosition() # FIX THIS!!! Why doesn't this method work?
         #box_piezos.Add( piezoX, proportion=1, flag=wx.EXPAND )
         box_allcontrols.Add( piezoX, proportion=1, flag=wx.EXPAND )
@@ -432,7 +432,7 @@ if __name__== '__main__':
         
         piezoY = APTPiezo( app.panel_aptcontrols, HWSerialNum=detected_piezoY_serialnum, style=wx.SUNKEN_BORDER )
         piezoY.SetToDisplayPosition()
-        ##piezoY.SetToClosedLoopMode()
+        piezoY.SetToClosedLoopMode()
         #box_piezos.Add( piezoY, proportion=1, flag=wx.EXPAND )
         box_allcontrols.Add( piezoY, proportion=1, flag=wx.EXPAND )
         app.positioners['piezoY'] = dict( control=piezoY, direction=1 )
@@ -444,7 +444,7 @@ if __name__== '__main__':
     
         piezoZ = APTPiezo( app.panel_aptcontrols, HWSerialNum=detected_piezoZ_serialnum, style=wx.SUNKEN_BORDER )
         piezoZ.SetToDisplayPosition()
-        ##piezoZ.SetToClosedLoopMode()
+        piezoZ.SetToClosedLoopMode()
         #box_piezos.Add( piezoZ, proportion=1, flag=wx.EXPAND )
         box_allcontrols.Add( piezoZ, proportion=1, flag=wx.EXPAND )
         app.positioners['piezoZ'] = dict( control=piezoZ, direction=1 )
