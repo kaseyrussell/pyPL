@@ -418,19 +418,23 @@ if __name__== '__main__':
         if detected_piezoX_serialnum != hard_coded_piezoX_SerialNum:
             print "PiezoX is not familiar (s/n: %d); direction/polarity may be off. See source code." % detected_piezoX_serialnum
             
-        piezoX = APTPiezo( app.panel_aptcontrols, HWSerialNum=detected_piezoX_serialnum, style=wx.SUNKEN_BORDER )
+        ##piezoX = APTPiezo( app.panel_aptcontrols, HWSerialNum=detected_piezoX_serialnum, style=wx.SUNKEN_BORDER )
+        """ Note stage Y-axis is now screen x-axis in Tim's updated camera layout. """
+        piezoX = APTPiezo( app.panel_aptcontrols, HWSerialNum=detected_piezoY_serialnum, style=wx.SUNKEN_BORDER )
         piezoX.SetToDisplayPosition()
         piezoX.SetToClosedLoopMode()
         #print "piezoX position:", piezoX.GetPosition() # FIX THIS!!! Why doesn't this method work?
         #box_piezos.Add( piezoX, proportion=1, flag=wx.EXPAND )
         box_allcontrols.Add( piezoX, proportion=1, flag=wx.EXPAND )
-        app.positioners['piezoX'] = dict( control=piezoX, direction=-1 )
+        app.positioners['piezoX'] = dict( control=piezoX, direction=1 )
         
         hard_coded_piezoY_SerialNum = 91823862
         if detected_piezoY_serialnum != hard_coded_piezoY_SerialNum:
             print "PiezoY is not familiar (s/n: %d); direction/polarity may be off. See source code." % detected_piezoY_serialnum
         
-        piezoY = APTPiezo( app.panel_aptcontrols, HWSerialNum=detected_piezoY_serialnum, style=wx.SUNKEN_BORDER )
+        ##piezoY = APTPiezo( app.panel_aptcontrols, HWSerialNum=detected_piezoY_serialnum, style=wx.SUNKEN_BORDER )
+        """ Note stage Y-axis is now screen x-axis in Tim's updated camera layout. """
+        piezoY = APTPiezo( app.panel_aptcontrols, HWSerialNum=detected_piezoX_serialnum, style=wx.SUNKEN_BORDER )
         piezoY.SetToDisplayPosition()
         piezoY.SetToClosedLoopMode()
         #box_piezos.Add( piezoY, proportion=1, flag=wx.EXPAND )
@@ -474,20 +478,26 @@ if __name__== '__main__':
         hard_coded_motorX_SerialNum = 90823946
         if detected_motorX_serialnum != hard_coded_motorX_SerialNum:
             print "MotorX is not familiar (s/n: %d); direction/polarity may be off. See source code." % detected_motorX_serialnum
-        motorX = APTMotor( app.panel_aptcontrols, HWSerialNum=detected_motorX_serialnum, style=wx.SUNKEN_BORDER )
+
+        """ Note stage Y-axis is now screen x-axis in Tim's updated camera layout. """
+        ##motorX = APTMotor( app.panel_aptcontrols, HWSerialNum=detected_motorX_serialnum, style=wx.SUNKEN_BORDER )
+        motorX = APTMotor( app.panel_aptcontrols, HWSerialNum=detected_motorY_serialnum, style=wx.SUNKEN_BORDER )
         motorX.SetStageAxisInfo( minpos=0.0, maxpos=50.0 )
         motorX.SetHomeParams()
         motorX.SetBLashDist( backlash=0.001 )
         motorX.SetVelParams()
         #box_motors.Add( motorX, proportion=1, flag=wx.EXPAND )
         box_allcontrols.Add( motorX, proportion=1, flag=wx.EXPAND )
-        app.positioners['motorX'] = dict( control=motorX, direction=1 )
+        app.positioners['motorX'] = dict( control=motorX, direction=-1 )
     
         if nummotor > 1:
             hard_coded_motorY_SerialNum = 90823947
             if detected_motorY_serialnum != hard_coded_motorY_SerialNum:
                 print "MotorY is not familiar (s/n: %d); direction/polarity may be off. See source code." % detected_motorY_serialnum
-            motorY = APTMotor( app.panel_aptcontrols, HWSerialNum=detected_motorY_serialnum, style=wx.SUNKEN_BORDER )
+
+            """ Note stage Y-axis is now screen x-axis in Tim's updated camera layout. """
+            ##motorY = APTMotor( app.panel_aptcontrols, HWSerialNum=detected_motorY_serialnum, style=wx.SUNKEN_BORDER )
+            motorY = APTMotor( app.panel_aptcontrols, HWSerialNum=detected_motorX_serialnum, style=wx.SUNKEN_BORDER )
             motorY.SetStageAxisInfo( minpos=0.0, maxpos=49.0 )
             motorY.SetHomeParams()
             motorY.SetBLashDist( backlash=0.001 )

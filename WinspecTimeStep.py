@@ -154,7 +154,10 @@ class MainPanel( wx.Panel ):
         box = wx.BoxSizer( wx.VERTICAL )
         
         self.DataPath = ""   # we don't yet know where the data is stored
-        self.SPEFiles = None # a list of SPE files to plot
+        self.SPEFiles = [] # a list of SPE files to plot
+        self.spectra = []
+        self.time = []
+            
         
         """ Set the time.
         """
@@ -246,6 +249,9 @@ class MainPanel( wx.Panel ):
             self.worker.setDaemon( True ) # kill this thread if we close the main app
             self.worker.start()
 
+            self.SPEFiles = [] # a list of SPE files to plot
+            self.spectra = []
+            self.time = []
             #self.fig = pylab.figure()
             #self.current_fignum = pylab.get_fignums()[-1]
             #self.axes = self.fig.add_subplot(111)
@@ -270,6 +276,9 @@ class MainPanel( wx.Panel ):
         # we destroy it. 
         if dlg.ShowModal() == wx.ID_OK:
             self.DataPath = dlg.GetPath()
+            self.SPEFiles = [] # a list of SPE files to plot
+            self.spectra = []
+            self.time = []
             #print 'You selected: %s\n' % self.DataPath
             if len( pylab.get_fignums() ) == 0 or pylab.get_fignums()[-1] != self.current_fignum:
                 self.fig = pylab.figure()
@@ -337,19 +346,14 @@ class MainPanel( wx.Panel ):
             # but this program is meant to be used while taking spectra every 30sec or so,
             # which would give us plenty of time to refresh the plot each time.
             # but the plotting itself is probably the most expensive part, so this is moot...
-            self.SPEFiles = files
-                
-            self.spectra = []
-            self.time = []
-            
             for fname in files:
-                self.time.append( float( os.path.split(fname)[1].split('s.SPE')[0].split('_')[-1] ) )
-                
-                s = spe.Spectrum( fname )
-                s.remove_linear_background( npoints=10 )
-                s.normalize()
-                
-                self.spectra.append( s.lum )
+                if fname not in self.SPEFiles:
+                    self.SPEFiles.append(fname)
+                    self.time.append( float( os.path.split(fname)[1].split('s.SPE')[0].split('_')[-1] ) )
+                    s = spe.Spectrum( fname )
+                    s.remove_linear_background( npoints=10 )
+                    s.normalize()
+                    self.spectra.append( s.lum )
             
             self.wavelen = s.wavelen
             
