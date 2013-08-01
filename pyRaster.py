@@ -681,6 +681,7 @@ class Raster( Raster_GUI.MainFrame ):
         elif event.data is True:
             self.statusbar.SetStatusText('Scan is done.',0)
             self.statusbar.SetStatusText('',2)
+            self.update_colormap()
             if self.to_be_saved is True:
                 self.save_data()
             else:
